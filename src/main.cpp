@@ -6,7 +6,7 @@ int main(int argc, char const *argv[])
 	else {
 		PCLPoleDetector* poleDetector = new PCLPoleDetector;
 		poleDetector->readPCD(argv[1]);
-		poleDetector->removeGroundPoints_height();
+		poleDetector->removeGroundPoints_height(-1.5);
 		poleDetector->writePCD("output_pcd.pcd");
 	}
 

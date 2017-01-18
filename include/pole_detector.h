@@ -20,7 +20,7 @@ public:
     ~PCLPoleDetector();
     void readPCD(string pathToFile);
     void writePCD(string pathToFile);
-    void removeGroundPoints_height();
+    void removeGroundPoints_height(double minHeight);
 
 private:
 	pcl::PointCloud<pcl::PointXYZ>::Ptr inCloud;

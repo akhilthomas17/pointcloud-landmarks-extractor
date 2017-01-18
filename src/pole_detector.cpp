@@ -23,13 +23,13 @@ void PCLPoleDetector::writePCD(string pathToFile){
   	std::cerr << "Saved " << PCLPoleDetector::processCloud->points.size() << " data points to output_pcd.pcd." << std::endl;
 }
 
-void PCLPoleDetector::removeGroundPoints_height(){
+void PCLPoleDetector::removeGroundPoints_height(double minHeight){
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
 	// Create the filtering object
 	pcl::PassThrough<pcl::PointXYZ> pass;
 	pass.setInputCloud (PCLPoleDetector::inCloud);
 	pass.setFilterFieldName ("z");
-  	pass.setFilterLimits (-1.5, 0);
+  	pass.setFilterLimits (minHeight, 0);
   	pass.filter(*PCLPoleDetector::processCloud);
   	cerr << "PointCloud size after: " << PCLPoleDetector::processCloud->width * PCLPoleDetector::processCloud->height << " data points." << endl;
 }
