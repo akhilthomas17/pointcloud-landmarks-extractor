@@ -9,6 +9,9 @@ using namespace std;
 // PCL specific include files:
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/io/pcd_io.h>
+
 
 class PCLPoleDetector
 {
@@ -16,6 +19,7 @@ public:
     PCLPoleDetector();
     ~PCLPoleDetector();
     void readPCD(string pathToFile);
+    void writePCD(string pathToFile);
     void removeGroundPoints_height();
 
 private:
