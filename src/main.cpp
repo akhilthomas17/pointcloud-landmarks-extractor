@@ -8,7 +8,8 @@ int main(int argc, char const *argv[])
 		poleDetector->readPCD(argv[1]);
 		poleDetector->preProcessor(0.1, 0.6);
 		//poleDetector->removeGroundPoints_height(-1.5);
-		poleDetector->writePCD("output_pcd.pcd");
+		//poleDetector->writePCD("output_pcd.pcd");
+
 
 /*  Testing MinMax3D function
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
