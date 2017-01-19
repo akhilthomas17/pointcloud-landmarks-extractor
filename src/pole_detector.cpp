@@ -2,44 +2,43 @@
 
 
 PCLPoleDetector::PCLPoleDetector(){
-	PCLPoleDetector::inCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
-	PCLPoleDetector::processCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
+	inCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
+	processCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
 }
 
 PCLPoleDetector::~PCLPoleDetector(){
-	delete PCLPoleDetector::inCloud.get();
-	delete PCLPoleDetector::processCloud.get();
+	delete inCloud.get();
+	delete processCloud.get();
 }
 
 void PCLPoleDetector::readPCD(string pathToFile){
 	//pcl::PCDReader reader;
-	//reader.read (pathToFile, *PCLPoleDetector::inCloud);
-	pcl::io::loadPCDFile<pcl::PointXYZ>(pathToFile, *PCLPoleDetector::inCloud);
+	//reader.read (pathToFile, *inCloud);
+	pcl::io::loadPCDFile<pcl::PointXYZ>(pathToFile, *inCloud);
 	std::vector<int> indices;
-	pcl::removeNaNFromPointCloud(*PCLPoleDetector::inCloud, *PCLPoleDetector::inCloud, indices);
-	cerr << "PointCloud size before: " << PCLPoleDetector::inCloud->width * PCLPoleDetector::inCloud->height << " data points." << endl;
-	PCLPoleDetector::processCloud = PCLPoleDetector::inCloud;
-	//cerr << "z value: " << PCLPoleDetector::inCloud->points[100].z << endl;
+	pcl::removeNaNFromPointCloud(*inCloud, *inCloud, indices);
+	cerr << "PointCloud size before: " << inCloud->width * inCloud->height << " data points." << endl;
+	processCloud = inCloud;
 }
 
 void PCLPoleDetector::writePCD(string pathToFile){
-	pcl::io::savePCDFileASCII (pathToFile, *PCLPoleDetector::processCloud);
-  	std::cerr << "Saved " << PCLPoleDetector::processCloud->points.size() << " data points to output_pcd.pcd." << std::endl;
+	pcl::io::savePCDFileASCII (pathToFile, *processCloud);
+  	std::cerr << "Saved " << processCloud->points.size() << " data points to output_pcd.pcd." << std::endl;
 }
 
 void PCLPoleDetector::removeGroundPoints_height(double minHeight){
 	// Create the filtering object
 	pcl::PassThrough<pcl::PointXYZ> pass;
-	pass.setInputCloud (PCLPoleDetector::inCloud);
+	pass.setInputCloud (inCloud);
 	pass.setFilterFieldName ("z");
   	pass.setFilterLimits (minHeight, 0);
-  	pass.filter(*PCLPoleDetector::processCloud);
-  	cerr << "PointCloud size after: " << PCLPoleDetector::processCloud->width * PCLPoleDetector::processCloud->height << " data points." << endl;
+  	pass.filter(*processCloud);
+  	cerr << "PointCloud size after: " << processCloud->width * processCloud->height << " data points." << endl;
 }
 
 void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshold){
 	pcl::PointXYZ minPt , maxPt;
-	pcl::getMinMax3D(*PCLPoleDetector::processCloud	, minPt, maxPt);
+	pcl::getMinMax3D(*processCloud	, minPt, maxPt);
   	cout << "Max z: " << maxPt.z << std::endl;
   	cout << "Min z: " << minPt.z << std::endl;
 
@@ -48,11 +47,9 @@ void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshol
   	double minHeight = minPt.z + groundClearance;
   	double maxHeight = minPt.z + heightThreshold;
   	pcl::PassThrough<pcl::PointXYZ> pass;
-	pass.setInputCloud (PCLPoleDetector::inCloud);
+	pass.setInputCloud (inCloud);
 	pass.setFilterFieldName ("z");
   	pass.setFilterLimits (minHeight, maxHeight);
-  	pass.filter(*PCLPoleDetector::processCloud);
-  	cerr << "PointCloud size after: " << PCLPoleDetector::processCloud->width * PCLPoleDetector::processCloud->height << " data points." << endl;
-
-
+  	pass.filter(*processCloud);
+  	cerr << "PointCloud size after: " << processCloud->width * processCloud->height << " data points." << endl;
 }
