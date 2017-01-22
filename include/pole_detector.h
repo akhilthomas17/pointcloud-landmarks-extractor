@@ -26,6 +26,7 @@ public:
     void removeGroundPoints_height(double minHeight);
     void preProcessor(double groundClearance, double heightThreshold);
     void pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char colour, string name);
+    void engineLanda(string pathToPCDFile);
 
 private:
 	pcl::PointCloud<pcl::PointXYZ>::Ptr inCloud;

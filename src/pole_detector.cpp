@@ -86,3 +86,8 @@ void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr c
 	viewer->addPointCloud<pcl::PointXYZ> (cloud, colourHandler, name);
 	viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, name);
 }
+
+void PCLPoleDetector::engineLanda(string pathToPCDFile){
+	readPCD(pathToPCDFile);
+	preProcessor(0.1, 0.6);
+}

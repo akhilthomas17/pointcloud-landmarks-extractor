@@ -5,8 +5,8 @@ int main(int argc, char const *argv[])
 		cout<<"usage: "<< argv[0] <<" <path to pcd file>\n";
 	else {
 		PCLPoleDetector* poleDetector = new PCLPoleDetector;
-		poleDetector->readPCD(argv[1]);
-		poleDetector->preProcessor(0.1, 0.6);
+		poleDetector->engineLanda(argv[1]);
+		 
 		//poleDetector->removeGroundPoints_height(-1.5);
 		//poleDetector->writePCD("output_pcd.pcd");
 
