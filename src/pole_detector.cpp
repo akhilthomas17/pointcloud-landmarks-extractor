@@ -41,26 +41,42 @@ void PCLPoleDetector::removeGroundPoints_height(double minHeight){
   	cerr << "PointCloud size after: " << processCloud->width * processCloud->height << " data points." << endl;
 }
 
-void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshold){
+void PCLPoleDetector::statistical_outlier_remover(double mean, double stdDev){
+	// Create the filtering object
+	pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+	sor.setInputCloud (processCloud);
+	sor.setMeanK (mean);
+	sor.setStddevMulThresh (stdDev);
+	sor.filter (*processCloud);
+}
+
+void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshold, double meanNoise, double stdDevNoise){
 	pcl::PointXYZ minPt , maxPt;
 	pcl::getMinMax3D(*processCloud, minPt, maxPt);
+	cout << "---Before Noise Removal---" << std::endl;
+	cout << "Min z: " << minPt.z << std::endl;
   	cout << "Max z: " << maxPt.z << std::endl;
-  	cout << "Min z: " << minPt.z << std::endl;
+
+  	// Filtering the point cloud to remove outliers
+  	// The mean and stdDev values have to be tuned for the particular case
+  	statistical_outlier_remover(meanNoise, stdDevNoise);
+  	pcl::getMinMax3D(*processCloud, minPt, maxPt);
+  	cout << "---After Noise Removal---" << std::endl;
+	cout << "Min z: " << minPt.z << std::endl;
+  	cout << "Max z: " << maxPt.z << std::endl;
+  	pointCloudVisualizer(processCloud, 'g', "Noise removed cloud");
 
   	// Ground Removal and Height Thresholding: Points in the selected range of "z" (height) is preserved
   	// Aim: To remove ground points and to remove structures with height more than a normal pole
   	double minHeight = minPt.z + groundClearance;
   	double maxHeight = minPt.z + heightThreshold;
   	pcl::PassThrough<pcl::PointXYZ> pass;
-	pass.setInputCloud (inCloud);
+	pass.setInputCloud (processCloud);
 	pass.setFilterFieldName ("z");
   	pass.setFilterLimits (minHeight, maxHeight);
   	pass.filter(*processCloud);
-  	cerr << "PointCloud size after: " << processCloud->width * processCloud->height << " data points." << endl;
-  	pointCloudVisualizer(processCloud, 'g', "Processed cloud");
-  	while (!viewer->wasStopped ()) { // Display the visualiser until 'q' key is pressed
-    	viewer->spinOnce (100);
-	}
+  	cerr << "PointCloud size after filtering: " << processCloud->width * processCloud->height << " data points." << endl;
+  	pointCloudVisualizer(processCloud, 'b', "Height thesholded cloud");
 }
 
 void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char colour, string name){
@@ -89,5 +105,8 @@ void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr c
 
 void PCLPoleDetector::engineLanda(string pathToPCDFile){
 	readPCD(pathToPCDFile);
-	preProcessor(0.1, 0.6);
+	preProcessor(0.1, 0.6, 50, 1);
+	while (!viewer->wasStopped ()) { // Display the visualiser until 'q' key is pressed
+    	viewer->spinOnce (100);
+	}
 }

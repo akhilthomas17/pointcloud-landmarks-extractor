@@ -14,6 +14,7 @@ using namespace std;
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/common.h>
 #include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 
 
 class PCLPoleDetector
@@ -24,7 +25,8 @@ public:
     void readPCD(string pathToFile);
     void writePCD(string pathToFile);
     void removeGroundPoints_height(double minHeight);
-    void preProcessor(double groundClearance, double heightThreshold);
+    void statistical_outlier_remover(double mean, double sigma);
+    void preProcessor(double groundClearance, double heightThreshold, double meanNoise, double stdDevNoise);
     void pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char colour, string name);
     void engineLanda(string pathToPCDFile);
 
