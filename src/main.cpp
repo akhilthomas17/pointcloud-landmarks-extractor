@@ -1,11 +1,11 @@
 #include <pole_detector.h>
 int main(int argc, char const *argv[])
 {
-	if ( argc != 2 ) // argc should be 2 for correct execution
-		cout<<"usage: "<< argv[0] <<" <path to pcd file>\n";
+	if ( argc != 4 ) // argc should be 4 for correct execution
+		cout<<"usage: "<< argv[0] <<" <path to pcd file>, <ground clearance>, <height threshold>\n";
 	else {
 		PCLPoleDetector* poleDetector = new PCLPoleDetector;
-		poleDetector->engineLanda(argv[1]);
+		poleDetector->algorithmLanda(argv[1], atof(argv[2]), atof(argv[3]));
 		 
 		//poleDetector->removeGroundPoints_height(-1.5);
 		//poleDetector->writePCD("output_pcd.pcd");

@@ -23,7 +23,7 @@ void PCLPoleDetector::readPCD(string pathToFile){
 	pcl::removeNaNFromPointCloud(*inCloud, *inCloud, indices);
 	cerr << "PointCloud size before: " << inCloud->width * inCloud->height << " data points." << endl;
 	processCloud = inCloud;
-	pointCloudVisualizer(inCloud, 'r', "Input cloud");
+	//pointCloudVisualizer(inCloud, 'r', "Input cloud");
 }
 
 void PCLPoleDetector::writePCD(string pathToFile){
@@ -31,13 +31,22 @@ void PCLPoleDetector::writePCD(string pathToFile){
   	std::cerr << "Saved " << processCloud->points.size() << " data points to output_pcd.pcd." << std::endl;
 }
 
-void PCLPoleDetector::heightThresholder(double minHeight, double maxHeight){
+void PCLPoleDetector::heightThresholder(){
 	// Create the filtering object
 	pcl::PassThrough<pcl::PointXYZ> pass;
 	pass.setInputCloud (processCloud);
 	pass.setFilterFieldName ("z");
   	pass.setFilterLimits (minHeight, maxHeight);
   	pass.filter(*processCloud);
+}
+
+void PCLPoleDetector::heightThresholder(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, double zMin, double zMax){
+	// Create the filtering object
+	pcl::PassThrough<pcl::PointXYZ> pass;
+	pass.setInputCloud (cloud);
+	pass.setFilterFieldName ("z");
+  	pass.setFilterLimits (zMin, zMax);
+  	pass.filter(*cloud);
 }
 
 void PCLPoleDetector::statistical_outlier_remover(double mean, double stdDev){
@@ -63,15 +72,25 @@ void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshol
   	cout << "---After Noise Removal---" << std::endl;
 	cout << "Min z: " << minPt.z << std::endl;
   	cout << "Max z: " << maxPt.z << std::endl;
-  	pointCloudVisualizer(processCloud, 'g', "Noise removed cloud");
+  	//pointCloudVisualizer(processCloud, 'g', "Noise removed cloud");
 
   	// Ground Removal and Height Thresholding: Points in the selected range of "z" (height) is preserved
   	// Aim: To remove ground points and to remove structures with height more than a normal pole
-  	double minHeight = minPt.z + groundClearance;
-  	double maxHeight = minPt.z + heightThreshold;
-  	heightThresholder(minHeight, maxHeight);
+  	minHeight = minPt.z + groundClearance;
+  	maxHeight = minPt.z + heightThreshold;
+  	heightThresholder();
   	cerr << "PointCloud size after filtering: " << processCloud->width * processCloud->height << " data points." << endl;
-  	pointCloudVisualizer(processCloud, 'b', "Height thesholded cloud");
+  	//pointCloudVisualizer(processCloud, 'b', "Height thesholded cloud");
+}
+
+void PCLPoleDetector::segmenter_landa(double numCuts, double minPts, double maxPts, double maxDist){
+	double stepCut = (maxHeight - minHeight)/numCuts;
+	for (int minCut = minHeight; minCut < maxHeight; minCut+=stepCut){
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud = processCloud;
+		heightThresholder(cutCloud, minCut, minCut+stepCut);
+		pointCloudVisualizer(processCloud, 'g', "Cut Cloud 01");
+		break;
+	}
 }
 
 void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char colour, string name){
@@ -98,10 +117,12 @@ void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr c
 	viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, name);
 }
 
-void PCLPoleDetector::engineLanda(string pathToPCDFile){
+void PCLPoleDetector::algorithmLanda(string pathToPCDFile, double groundClearance, double heightThreshold){
 	readPCD(pathToPCDFile);
-	preProcessor(0.1, 0.6, 50, 1);
+	preProcessor(groundClearance, heightThreshold, 50, 1);
+	segmenter_landa(40, 30, 10000, 0.3);
 	while (!viewer->wasStopped ()) { // Display the visualiser until 'q' key is pressed
     	viewer->spinOnce (100);
+    	boost::this_thread::sleep (boost::posix_time::microseconds (100000));
 	}
 }
