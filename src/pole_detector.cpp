@@ -31,14 +31,13 @@ void PCLPoleDetector::writePCD(string pathToFile){
   	std::cerr << "Saved " << processCloud->points.size() << " data points to output_pcd.pcd." << std::endl;
 }
 
-void PCLPoleDetector::removeGroundPoints_height(double minHeight){
+void PCLPoleDetector::heightThresholder(double minHeight, double maxHeight){
 	// Create the filtering object
 	pcl::PassThrough<pcl::PointXYZ> pass;
-	pass.setInputCloud (inCloud);
+	pass.setInputCloud (processCloud);
 	pass.setFilterFieldName ("z");
-  	pass.setFilterLimits (minHeight, 0);
+  	pass.setFilterLimits (minHeight, maxHeight);
   	pass.filter(*processCloud);
-  	cerr << "PointCloud size after: " << processCloud->width * processCloud->height << " data points." << endl;
 }
 
 void PCLPoleDetector::statistical_outlier_remover(double mean, double stdDev){
@@ -70,11 +69,7 @@ void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshol
   	// Aim: To remove ground points and to remove structures with height more than a normal pole
   	double minHeight = minPt.z + groundClearance;
   	double maxHeight = minPt.z + heightThreshold;
-  	pcl::PassThrough<pcl::PointXYZ> pass;
-	pass.setInputCloud (processCloud);
-	pass.setFilterFieldName ("z");
-  	pass.setFilterLimits (minHeight, maxHeight);
-  	pass.filter(*processCloud);
+  	heightThresholder(minHeight, maxHeight);
   	cerr << "PointCloud size after filtering: " << processCloud->width * processCloud->height << " data points." << endl;
   	pointCloudVisualizer(processCloud, 'b', "Height thesholded cloud");
 }
