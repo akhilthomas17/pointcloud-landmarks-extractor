@@ -40,13 +40,13 @@ void PCLPoleDetector::heightThresholder(){
   	pass.filter(*processCloud);
 }
 
-void PCLPoleDetector::heightThresholder(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, double zMin, double zMax){
+void PCLPoleDetector::heightThresholder(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, double zMin, double zMax){
 	// Create the filtering object
 	pcl::PassThrough<pcl::PointXYZ> pass;
-	pass.setInputCloud (cloud);
+	pass.setInputCloud (processCloud);
 	pass.setFilterFieldName ("z");
   	pass.setFilterLimits (zMin, zMax);
-  	pass.filter(*cloud);
+  	pass.filter(*cutCloud);
 }
 
 void PCLPoleDetector::statistical_outlier_remover(double mean, double stdDev){
@@ -86,9 +86,9 @@ void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshol
 void PCLPoleDetector::segmenter_landa(double numCuts, double minPts, double maxPts, double maxDist){
 	double stepCut = (maxHeight - minHeight)/numCuts;
 	for (int minCut = minHeight; minCut < maxHeight; minCut+=stepCut){
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud = processCloud;
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud(new pcl::PointCloud<pcl::PointXYZ>);
 		heightThresholder(cutCloud, minCut, minCut+stepCut);
-		pointCloudVisualizer(processCloud, 'g', "Cut Cloud 01");
+		pointCloudVisualizer(cutCloud, 'g', "Cut Cloud 01");
 		break;
 	}
 }
@@ -120,7 +120,7 @@ void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr c
 void PCLPoleDetector::algorithmLanda(string pathToPCDFile, double groundClearance, double heightThreshold){
 	readPCD(pathToPCDFile);
 	preProcessor(groundClearance, heightThreshold, 50, 1);
-	segmenter_landa(40, 30, 10000, 0.3);
+	segmenter_landa(heightThreshold, 30, 10000, 0.3);
 	while (!viewer->wasStopped ()) { // Display the visualiser until 'q' key is pressed
     	viewer->spinOnce (100);
     	boost::this_thread::sleep (boost::posix_time::microseconds (100000));
