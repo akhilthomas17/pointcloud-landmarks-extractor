@@ -58,16 +58,19 @@ void PCLPoleDetector::statistical_outlier_remover(double mean, double stdDev){
 	sor.filter (*processCloud);
 }
 
-void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshold, double meanNoise, double stdDevNoise){
+void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshold, double meanPtsNoise, double stdDevNoise){
 	pcl::PointXYZ minPt , maxPt;
+
+	/*
 	pcl::getMinMax3D(*processCloud, minPt, maxPt);
 	cout << "---Before Noise Removal---" << std::endl;
 	cout << "Min z: " << minPt.z << std::endl;
   	cout << "Max z: " << maxPt.z << std::endl;
+  	*/
 
   	// Filtering the point cloud to remove outliers
-  	// The mean and stdDev values have to be tuned for the particular case
-  	statistical_outlier_remover(meanNoise, stdDevNoise);
+  	// The meanPtsNoise and stdDev values have to be tuned for the particular case
+  	statistical_outlier_remover(meanPtsNoise, stdDevNoise);
   	pcl::getMinMax3D(*processCloud, minPt, maxPt);
   	cout << "---After Noise Removal---" << std::endl;
 	cout << "Min z: " << minPt.z << std::endl;
@@ -83,12 +86,57 @@ void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshol
   	//pointCloudVisualizer(processCloud, 'b', "Height thesholded cloud");
 }
 
+void PCLPoleDetector::planarSurfaceRemover(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud){
+	// Create the segmentation object for the planar model and set all the parameters
+	pcl::SACSegmentation<pcl::PointXYZ> seg;
+	pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+	pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+	// pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZ> ()); //To see the extracted plane
+	seg.setOptimizeCoefficients (true);
+	seg.setModelType (pcl::SACMODEL_PLANE);
+	seg.setMethodType (pcl::SAC_RANSAC);
+	seg.setMaxIterations (10);
+	seg.setDistanceThreshold (0.02);
+
+	int i=0, nr_points = (int) cutCloud->points.size ();
+  	while (cutCloud->points.size () > 0.3 * nr_points){
+    	// Segment the largest planar component from the remaining cloud
+    	seg.setInputCloud (cutCloud);
+    	seg.segment (*inliers, *coefficients);
+    	if (inliers->indices.size () == 0){
+      		std::cout << "Could not estimate a planar model for the given dataset." << std::endl;
+      		break;
+    	}
+
+    	// Extract the planar inliers from the input cloud
+    	pcl::ExtractIndices<pcl::PointXYZ> extract;
+    	extract.setInputCloud (cutCloud);
+    	extract.setIndices (inliers);
+    	extract.setNegative (false);
+
+    	/* To see the plane extracted, uncomment below:
+
+    	// Get the points associated with the planar surface
+    	extract.filter (*cloud_plane);
+    	std::cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << std::endl;
+
+    	*/
+
+    	// Remove the planar inliers, extract the rest
+    	extract.setNegative (true);
+    	extract.filter (*cutCloud);
+  	}
+
+}
+
 void PCLPoleDetector::segmenter_landa(double numCuts, double minPts, double maxPts, double maxDist){
 	double stepCut = (maxHeight - minHeight)/numCuts;
 	for (int minCut = minHeight; minCut < maxHeight; minCut+=stepCut){
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud(new pcl::PointCloud<pcl::PointXYZ>);
 		heightThresholder(cutCloud, minCut, minCut+stepCut);
-		pointCloudVisualizer(cutCloud, 'g', "Cut Cloud 01");
+		pointCloudVisualizer(cutCloud, 'g', "Cut Cloud");
+		planarSurfaceRemover(cutCloud);
+		pointCloudVisualizer(cutCloud, 'r', "Plane removed Cut Cloud");
 		break;
 	}
 }
