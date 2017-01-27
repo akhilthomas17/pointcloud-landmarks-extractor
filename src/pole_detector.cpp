@@ -144,44 +144,77 @@ void PCLPoleDetector::euclideanClusterExtractor(pcl::PointCloud<pcl::PointXYZ>::
   	ec.setSearchMethod (tree);
   	ec.setInputCloud (cutCloud);
   	ec.extract (clusterIndices);
-  	cerr << "Number of clusters for cut-0 " << clusterIndices.size() << endl;
 
-   	int j = 0;
+}
+
+void eigenV4f2PointXYZ(Eigen::Vector4f const &vec, pcl::PointXYZ &point){
+	point.x = vec[0];
+	point.y = vec[1];
+	point.z = vec[2];
+}
+
+void PCLPoleDetector::clusterFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, vector<pcl::PointIndices> const &clusterIndices, double maxDist, list<Cluster> &filteredCluster){
+  	int j = 0;
   	for (vector<pcl::PointIndices>::const_iterator it = clusterIndices.begin (); it != clusterIndices.end (); ++it)
   	{
+  		//** Creating the point cloud for each cluster
     	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
     	for (vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
       		cloud_cluster->points.push_back (cutCloud->points[*pit]); //*
     	cloud_cluster->width = cloud_cluster->points.size ();
     	cloud_cluster->height = 1;
     	cloud_cluster->is_dense = true;
-    	pointCloudVisualizer(cloud_cluster, 'b', "cluster" + boost::lexical_cast<string>(j));
-    	cout << "PointCloud representing the Cluster " << j << ":" << cloud_cluster->points.size () << " data points." << std::endl;
-    	j++;
-  	}
-}
+    	//pointCloudVisualizer(cloud_cluster, 'b', "cluster" + boost::lexical_cast<string>(j));
 
-void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDist, list<Cluster> finalCluster){
-
+    	//** Check if the cluster satisfies max-distance criterion
+    	pcl::PointXYZ minPt, maxPt;
+    	double maxDistCluster = pcl::getMaxSegment(*cloud_cluster, minPt, maxPt);
+    	//cerr << "Max Distance of cluster " << j << ": " << maxDistCluster << endl;
+    	if (maxDistCluster <= maxDist){
+    		Eigen::Vector4f vecCentroid, maxDistVec;
+    		pcl::compute3DCentroid(*cloud_cluster, vecCentroid);
+    		pcl::getMaxDistance(*cloud_cluster, vecCentroid, maxDistVec);
+    		double radius = (vecCentroid - maxDistVec).norm();
+    		//cerr << "Radius of cluster " << j << ": " << radius << endl;
+    		//Cluster cluster(vecCentroid, radius);
+    		filteredCluster.push_back(Cluster(vecCentroid, radius));
+    		j++;
+    	}
+    	//delete cloud_cluster.get();
+   	}
 }
 
 void PCLPoleDetector::segmenterLanda(double numCuts, double minPts, double maxPts, double maxDist){
+	list<Cluster> filteredCluster;
 	double stepCut = (maxHeight - minHeight)/numCuts;
-	double clusterTolerance = 1;
+	double clusterTolerance = 0.2;
+	int j = 0;
+	char colour;
 	for (int minCut = minHeight; minCut < maxHeight; minCut+=stepCut){
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud(new pcl::PointCloud<pcl::PointXYZ>);
 		heightThresholder(cutCloud, minCut, minCut+stepCut);
 		// pointCloudVisualizer(cutCloud, 'g', "Cut Cloud");
 		planarSurfaceRemover(cutCloud);
-		pointCloudVisualizer(cutCloud, 'g', "Plane removed Cut Cloud");
-		cerr << "PointCloud size of cutCloud 0 " << cutCloud->width * cutCloud->height << " data points." << endl;
+		if (j%2 == 0)
+			colour = 'g';
+		else
+			colour = 'b';
+		pointCloudVisualizer(cutCloud, colour, "Plane removed Cut Cloud" + boost::lexical_cast<string>(j));
+		cerr << "PointCloud size of cut " << j << ": " << cutCloud->width * cutCloud->height << " data points." << endl;
 		vector<pcl::PointIndices> clusterIndices;
 		euclideanClusterExtractor(cutCloud, clusterIndices, minPts, maxPts, clusterTolerance);
-		break;
+		cerr << "Number of clusters for cut " << j << ": " << clusterIndices.size() << endl;
+		clusterFilter(cutCloud, clusterIndices, maxDist, filteredCluster);
+		cerr << "Number of clusters for cut " << j << " after filtering: " << filteredCluster.size() << endl;
+		pointCloudVisualizer(filteredCluster, 'r', "cluster" + boost::lexical_cast<string>(j));
+		//delete cutCloud.get();
+		j++;
+		if (j == 4)
+			break;
 	}
 }
 
-void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char colour, string name){
+void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char colour, string id){
 	int r, g, b;
 	switch(colour){
 		case 'r':
@@ -201,8 +234,38 @@ void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr c
 				break;
 	}
 	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> colourHandler(cloud, r, g, b);
-	viewer->addPointCloud<pcl::PointXYZ> (cloud, colourHandler, name);
-	viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, name);
+	viewer->addPointCloud<pcl::PointXYZ> (cloud, colourHandler, id);
+	viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, id);
+}
+
+void PCLPoleDetector::pointCloudVisualizer(list<Cluster> const &clusterList, char colour, string id){
+	int r, g, b;
+	switch(colour){
+		case 'r':
+				r = 255;
+				g = 0;
+				b = 0;
+				break;
+		case 'g':
+				r = 0;
+				g = 255;
+				b = 0;
+				break;
+		case 'b':
+				r = 0;
+				g = 0;
+				b = 255;
+				break;
+	}
+	int j = 0;
+	pcl::PointXYZ center;
+	for (list<Cluster>::const_iterator it = clusterList.begin(); it != clusterList.end(); ++it){
+		Cluster cluster = *it;
+		eigenV4f2PointXYZ(cluster.getCentroid(), center);
+		viewer->addSphere(center, cluster.getRadius()/2, r, g, b, id+boost::lexical_cast<string>(j));
+		j++;
+	}
+
 }
 
 void PCLPoleDetector::algorithmLanda(string pathToPCDFile, double groundClearance, double heightThreshold, double minClusterSize, double maxDist){

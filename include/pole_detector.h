@@ -16,6 +16,8 @@ using namespace std;
 #include <pcl/filters/extract_indices.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/common.h>
+#include <pcl/common/distances.h>
+#include <pcl/common/centroid.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/sample_consensus/method_types.h>
@@ -29,15 +31,15 @@ using namespace std;
 class Cluster
 {
 public:
-	Cluster(){
-	}
-	~Cluster(){
-	}
-	pcl::PointXYZ getCenter(){return center;}
+	Cluster(Eigen::Vector4f centroid_, double radius_):
+	centroid(centroid_), 
+	radius(radius_){}
+	~Cluster(){}
+	Eigen::Vector4f getCentroid(){return centroid;}
 	double getRadius(){return radius;}
 
 private:
-	pcl::PointXYZ center;
+	Eigen::Vector4f centroid;
 	double radius;
 };
 
@@ -51,7 +53,8 @@ public:
     void preProcessor(double groundClearance, double heightThreshold, double meanPtsNoise, double stdDevNoise);
     void segmenterLanda(double numCuts, double minPts, double maxPts, double maxDist);
     void algorithmLanda(string pathToPCDFile, double groundClearance, double heightThreshold, double minClusterSize, double maxDist);
-    void pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char colour, string name);
+    void pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char colour, string id);
+    void pointCloudVisualizer(list<Cluster> const &clusterList, char colour, string id);
 
 private:
 	void heightThresholder();
@@ -59,7 +62,7 @@ private:
     void statisticalOutlierRemover(double mean, double sigma);
     void planarSurfaceRemover(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud);
     void euclideanClusterExtractor(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud,  vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
-    void clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDist, list<Cluster> finalCluster);
+    void clusterFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, vector<pcl::PointIndices> const &clusterIndices, double maxDist, list<Cluster> &filteredCluster);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr inCloud;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud;
 	double minHeight, maxHeight;
