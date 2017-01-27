@@ -132,12 +132,11 @@ void PCLPoleDetector::planarSurfaceRemover(pcl::PointCloud<pcl::PointXYZ>::Ptr c
   	}
 }
 
-void PCLPoleDetector::euclideanClusterExtractor(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, double minClusterSize, double maxClusterSize, double clusterTolerance){
+void PCLPoleDetector::euclideanClusterExtractor(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance){
 	// Creating the KdTree object for the search method of the extraction
   	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
   	tree->setInputCloud (cutCloud);
 
-  	std::vector<pcl::PointIndices> clusterIndices;
   	pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
   	ec.setClusterTolerance (clusterTolerance);
   	ec.setMinClusterSize (minClusterSize);
@@ -148,22 +147,27 @@ void PCLPoleDetector::euclideanClusterExtractor(pcl::PointCloud<pcl::PointXYZ>::
   	cerr << "Number of clusters for cut-0 " << clusterIndices.size() << endl;
 
    	int j = 0;
-  	for (std::vector<pcl::PointIndices>::const_iterator it = clusterIndices.begin (); it != clusterIndices.end (); ++it)
+  	for (vector<pcl::PointIndices>::const_iterator it = clusterIndices.begin (); it != clusterIndices.end (); ++it)
   	{
     	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-    	for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
+    	for (vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
       		cloud_cluster->points.push_back (cutCloud->points[*pit]); //*
     	cloud_cluster->width = cloud_cluster->points.size ();
     	cloud_cluster->height = 1;
     	cloud_cluster->is_dense = true;
     	pointCloudVisualizer(cloud_cluster, 'b', "cluster" + boost::lexical_cast<string>(j));
-    	std::cout << "PointCloud representing the Cluster " << j << ":" << cloud_cluster->points.size () << " data points." << std::endl;
+    	cout << "PointCloud representing the Cluster " << j << ":" << cloud_cluster->points.size () << " data points." << std::endl;
     	j++;
   	}
 }
 
-void PCLPoleDetector::segmenterLanda(double numCuts, double minPts, double maxPts, double clusterTolerance){
+void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDist, list<Cluster> finalCluster){
+
+}
+
+void PCLPoleDetector::segmenterLanda(double numCuts, double minPts, double maxPts, double maxDist){
 	double stepCut = (maxHeight - minHeight)/numCuts;
+	double clusterTolerance = 1;
 	for (int minCut = minHeight; minCut < maxHeight; minCut+=stepCut){
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud(new pcl::PointCloud<pcl::PointXYZ>);
 		heightThresholder(cutCloud, minCut, minCut+stepCut);
@@ -171,7 +175,8 @@ void PCLPoleDetector::segmenterLanda(double numCuts, double minPts, double maxPt
 		planarSurfaceRemover(cutCloud);
 		pointCloudVisualizer(cutCloud, 'g', "Plane removed Cut Cloud");
 		cerr << "PointCloud size of cutCloud 0 " << cutCloud->width * cutCloud->height << " data points." << endl;
-		euclideanClusterExtractor(cutCloud, minPts, maxPts, clusterTolerance);
+		vector<pcl::PointIndices> clusterIndices;
+		euclideanClusterExtractor(cutCloud, clusterIndices, minPts, maxPts, clusterTolerance);
 		break;
 	}
 }
@@ -200,12 +205,12 @@ void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr c
 	viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, name);
 }
 
-void PCLPoleDetector::algorithmLanda(string pathToPCDFile, double groundClearance, double heightThreshold, double minClusterSize, double clusterTolerance){
+void PCLPoleDetector::algorithmLanda(string pathToPCDFile, double groundClearance, double heightThreshold, double minClusterSize, double maxDist){
 	readPCD(pathToPCDFile);
 	double minKNoise = 10;
 	double stdDevNoise = 1;
 	preProcessor(groundClearance, heightThreshold, minKNoise, stdDevNoise);
-	segmenterLanda(heightThreshold*0.8, 10, 1000, clusterTolerance);
+	segmenterLanda(heightThreshold*0.8, 10, 1000, maxDist);
 	while (!viewer->wasStopped ()) { // Display the visualiser until 'q' key is pressed
     	viewer->spinOnce (100);
     	boost::this_thread::sleep (boost::posix_time::microseconds (100000));

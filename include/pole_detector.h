@@ -50,7 +50,7 @@ public:
     void writePCD(string pathToFile);
     void preProcessor(double groundClearance, double heightThreshold, double meanPtsNoise, double stdDevNoise);
     void segmenterLanda(double numCuts, double minPts, double maxPts, double maxDist);
-    void algorithmLanda(string pathToPCDFile, double groundClearance, double heightThreshold, double minClusterSize, double clusterTolerance);
+    void algorithmLanda(string pathToPCDFile, double groundClearance, double heightThreshold, double minClusterSize, double maxDist);
     void pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char colour, string name);
 
 private:
@@ -58,7 +58,8 @@ private:
     void heightThresholder(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, double zMin, double zMax);
     void statisticalOutlierRemover(double mean, double sigma);
     void planarSurfaceRemover(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud);
-    void euclideanClusterExtractor(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, double minClusterSize, double maxClusterSize, double clusterTolerance);
+    void euclideanClusterExtractor(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud,  vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
+    void clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDist, list<Cluster> finalCluster);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr inCloud;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud;
 	double minHeight, maxHeight;
