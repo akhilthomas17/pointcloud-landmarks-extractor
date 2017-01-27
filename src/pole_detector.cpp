@@ -21,7 +21,7 @@ void PCLPoleDetector::readPCD(string pathToFile){
 	pcl::io::loadPCDFile<pcl::PointXYZ>(pathToFile, *inCloud);
 	std::vector<int> indices;
 	pcl::removeNaNFromPointCloud(*inCloud, *inCloud, indices);
-	cerr << "PointCloud size before: " << inCloud->width * inCloud->height << " data points." << endl;
+	cerr << "PointCloud size original: " << inCloud->width * inCloud->height << " data points." << endl;
 	processCloud = inCloud;
 	//pointCloudVisualizer(inCloud, 'r', "Input cloud");
 }
@@ -38,6 +38,7 @@ void PCLPoleDetector::heightThresholder(){
 	pass.setFilterFieldName ("z");
   	pass.setFilterLimits (minHeight, maxHeight);
   	pass.filter(*processCloud);
+  	cerr << "PointCloud size after height thresholding: " << processCloud->width * processCloud->height << " data points." << endl;
 }
 
 void PCLPoleDetector::heightThresholder(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, double zMin, double zMax){
@@ -49,13 +50,14 @@ void PCLPoleDetector::heightThresholder(pcl::PointCloud<pcl::PointXYZ>::Ptr cutC
   	pass.filter(*cutCloud);
 }
 
-void PCLPoleDetector::statistical_outlier_remover(double mean, double stdDev){
+void PCLPoleDetector::statisticalOutlierRemover(double mean, double stdDev){
 	// Create the filtering object
 	pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
 	sor.setInputCloud (processCloud);
 	sor.setMeanK (mean);
 	sor.setStddevMulThresh (stdDev);
 	sor.filter (*processCloud);
+	cerr << "PointCloud size after noise removal: " << processCloud->width * processCloud->height << " data points." << endl;
 }
 
 void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshold, double meanPtsNoise, double stdDevNoise){
@@ -70,11 +72,13 @@ void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshol
 
   	// Filtering the point cloud to remove outliers
   	// The meanPtsNoise and stdDev values have to be tuned for the particular case
-  	statistical_outlier_remover(meanPtsNoise, stdDevNoise);
+  	statisticalOutlierRemover(meanPtsNoise, stdDevNoise);
   	pcl::getMinMax3D(*processCloud, minPt, maxPt);
+  	/*
   	cout << "---After Noise Removal---" << std::endl;
 	cout << "Min z: " << minPt.z << std::endl;
   	cout << "Max z: " << maxPt.z << std::endl;
+  	*/
   	//pointCloudVisualizer(processCloud, 'g', "Noise removed cloud");
 
   	// Ground Removal and Height Thresholding: Points in the selected range of "z" (height) is preserved
@@ -82,7 +86,7 @@ void PCLPoleDetector::preProcessor(double groundClearance, double heightThreshol
   	minHeight = minPt.z + groundClearance;
   	maxHeight = minPt.z + heightThreshold;
   	heightThresholder();
-  	cerr << "PointCloud size after filtering: " << processCloud->width * processCloud->height << " data points." << endl;
+  	//cerr << "PointCloud size after Preprocessing: " << processCloud->width * processCloud->height << " data points." << endl;
   	//pointCloudVisualizer(processCloud, 'b', "Height thesholded cloud");
 }
 
@@ -126,17 +130,48 @@ void PCLPoleDetector::planarSurfaceRemover(pcl::PointCloud<pcl::PointXYZ>::Ptr c
     	extract.setNegative (true);
     	extract.filter (*cutCloud);
   	}
-
 }
 
-void PCLPoleDetector::segmenter_landa(double numCuts, double minPts, double maxPts, double maxDist){
+void PCLPoleDetector::euclideanClusterExtractor(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, double minClusterSize, double maxClusterSize, double clusterTolerance){
+	// Creating the KdTree object for the search method of the extraction
+  	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+  	tree->setInputCloud (cutCloud);
+
+  	std::vector<pcl::PointIndices> clusterIndices;
+  	pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+  	ec.setClusterTolerance (clusterTolerance);
+  	ec.setMinClusterSize (minClusterSize);
+  	ec.setMaxClusterSize (maxClusterSize);
+  	ec.setSearchMethod (tree);
+  	ec.setInputCloud (cutCloud);
+  	ec.extract (clusterIndices);
+  	cerr << "Number of clusters for cut-0 " << clusterIndices.size() << endl;
+
+   	int j = 0;
+  	for (std::vector<pcl::PointIndices>::const_iterator it = clusterIndices.begin (); it != clusterIndices.end (); ++it)
+  	{
+    	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+    	for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
+      		cloud_cluster->points.push_back (cutCloud->points[*pit]); //*
+    	cloud_cluster->width = cloud_cluster->points.size ();
+    	cloud_cluster->height = 1;
+    	cloud_cluster->is_dense = true;
+    	pointCloudVisualizer(cloud_cluster, 'b', "cluster" + boost::lexical_cast<string>(j));
+    	std::cout << "PointCloud representing the Cluster " << j << ":" << cloud_cluster->points.size () << " data points." << std::endl;
+    	j++;
+  	}
+}
+
+void PCLPoleDetector::segmenterLanda(double numCuts, double minPts, double maxPts, double clusterTolerance){
 	double stepCut = (maxHeight - minHeight)/numCuts;
 	for (int minCut = minHeight; minCut < maxHeight; minCut+=stepCut){
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud(new pcl::PointCloud<pcl::PointXYZ>);
 		heightThresholder(cutCloud, minCut, minCut+stepCut);
-		pointCloudVisualizer(cutCloud, 'g', "Cut Cloud");
+		// pointCloudVisualizer(cutCloud, 'g', "Cut Cloud");
 		planarSurfaceRemover(cutCloud);
-		pointCloudVisualizer(cutCloud, 'r', "Plane removed Cut Cloud");
+		pointCloudVisualizer(cutCloud, 'g', "Plane removed Cut Cloud");
+		cerr << "PointCloud size of cutCloud 0 " << cutCloud->width * cutCloud->height << " data points." << endl;
+		euclideanClusterExtractor(cutCloud, minPts, maxPts, clusterTolerance);
 		break;
 	}
 }
@@ -165,10 +200,12 @@ void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr c
 	viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, name);
 }
 
-void PCLPoleDetector::algorithmLanda(string pathToPCDFile, double groundClearance, double heightThreshold){
+void PCLPoleDetector::algorithmLanda(string pathToPCDFile, double groundClearance, double heightThreshold, double minClusterSize, double clusterTolerance){
 	readPCD(pathToPCDFile);
-	preProcessor(groundClearance, heightThreshold, 50, 1);
-	segmenter_landa(heightThreshold, 30, 10000, 0.3);
+	double minKNoise = 10;
+	double stdDevNoise = 1;
+	preProcessor(groundClearance, heightThreshold, minKNoise, stdDevNoise);
+	segmenterLanda(heightThreshold*0.8, 10, 1000, clusterTolerance);
 	while (!viewer->wasStopped ()) { // Display the visualiser until 'q' key is pressed
     	viewer->spinOnce (100);
     	boost::this_thread::sleep (boost::posix_time::microseconds (100000));
