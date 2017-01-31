@@ -24,11 +24,11 @@ public:
     ~PCLPoleDetector();
     void readPCD(string pathToFile);
     void writePCD(string pathToFile);
-    void removeGroundPoints_height(double minHeight);
+    void removeGroundPoints_height();
     void statistical_outlier_remover(double mean, double sigma);
-    void preProcessor(double groundClearance, double heightThreshold, double meanNoise, double stdDevNoise);
+    void preProcessor(double meanKNoise, double stdDevNoise);
     void pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char colour, string name);
-    void engineLanda(string pathToPCDFile);
+    void engineLanda(string pathToPCDFile, double minKNoise, double stdDevNoise);
 
 private:
 	pcl::PointCloud<pcl::PointXYZ>::Ptr inCloud;
