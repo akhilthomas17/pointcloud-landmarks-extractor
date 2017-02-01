@@ -6,8 +6,8 @@ PCLPoleDetector::PCLPoleDetector(){
 	processCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
 	debugCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
 	viewer = boost::shared_ptr<pcl::visualization::PCLVisualizer> (new pcl::visualization::PCLVisualizer ("Pole Detector"));
-	viewer->setBackgroundColor (0, 0, 0);
-	viewer->addCoordinateSystem (1.0, "cloud", 0);
+	//viewer->setBackgroundColor (0, 0, 0);
+	//viewer->addCoordinateSystem (1.0, "cloud", 0);
 }
 
 PCLPoleDetector::~PCLPoleDetector(){
@@ -100,26 +100,17 @@ void PCLPoleDetector::preProcessor(double meanKNoise, double stdDevNoise, double
   	cerr << "PointCloud size after ground plane removal: " << processCloud->width * processCloud->height << " data points." << endl;
 }
 
-void PCLPoleDetector::cutBuilder(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, double zMin, double zMax){
-	// Create the filtering object
-	pcl::PassThrough<pcl::PointXYZ> pass;
-	pass.setInputCloud (processCloud);
-	pass.setFilterFieldName ("z");
-  	pass.setFilterLimits (zMin, zMax);
-  	pass.filter(*cutCloud);
-}
-
-void PCLPoleDetector::euclideanClusterExtractor(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance){
+void PCLPoleDetector::euclideanClusterExtractor(vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance){
 	// Creating the KdTree object for the search method of the extraction
   	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-  	tree->setInputCloud (cutCloud);
+  	tree->setInputCloud (processCloud);
 
   	pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
   	ec.setClusterTolerance (clusterTolerance);
   	ec.setMinClusterSize (minClusterSize);
   	ec.setMaxClusterSize (maxClusterSize);
   	ec.setSearchMethod (tree);
-  	ec.setInputCloud (cutCloud);
+  	ec.setInputCloud (processCloud);
   	ec.extract (clusterIndices);
 }
 
@@ -136,70 +127,68 @@ void eigenV4f2PointXYZ(Eigen::Vector4f const &vec, pcl::PointXYZ &point){
 	point.z = vec[2];
 }
 
-void PCLPoleDetector::clusterFilter(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, vector<pcl::PointIndices> const &clusterIndices, double maxDist, list<Cluster> &filteredCluster){
+void PointXYZ2eigenV4f2D(Eigen::Vector4f &vec, pcl::PointXYZ const &point){
+	vec[0] = point.x;
+	vec[1] = point.y;
+	vec[2] = 1;
+	vec[3] = 1;
+
+}
+
+void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDiameter, list<Cluster> &filteredCluster){
   	int j = 0;
   	boost::random::uniform_int_distribution<> dist(0, 255);
-  	for (vector<pcl::PointIndices>::const_iterator it = clusterIndices.begin (); it != clusterIndices.end (); ++it)
-  	{
+  	for (vector<pcl::PointIndices>::const_iterator it = clusterIndices.begin (); it != clusterIndices.end (); ++it){
   		//** Creating the point cloud for each cluster
     	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-    	//** Making color for each cluster
-    	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen); 
-		uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
     	for (vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit){
-      		cloud_cluster->points.push_back (cutCloud->points[*pit]); //*
-      		pcl::PointXYZRGB PtColored;
-      		makeColoredPoint(PtColored, cutCloud->points[*pit], rgb);
-      		debugCloud->points.push_back(PtColored);
+      		cloud_cluster->points.push_back (processCloud->points[*pit]); //*
     	}
     	cloud_cluster->width = cloud_cluster->points.size ();
     	cloud_cluster->height = 1;
     	cloud_cluster->is_dense = true;
     	//pointCloudVisualizer(cloud_cluster, 'b', "cluster" + boost::lexical_cast<string>(j));
 
-    	//** Check if the cluster satisfies max-distance criterion
+    	//** Check if the cluster satisfies max-Diameter criterion
     	pcl::PointXYZ minPt, maxPt;
-    	double maxDistCluster = pcl::getMaxSegment(*cloud_cluster, minPt, maxPt);
+    	Eigen::Vector4f minVec, maxVec;
+    	pcl::getMinMax3D(*cloud_cluster, minPt, maxPt);
+    	PointXYZ2eigenV4f2D(minVec, minPt);
+    	PointXYZ2eigenV4f2D(maxVec, maxPt);
+    	double clusterDiameter = (maxVec - minVec).norm();
     	//cerr << "Max Distance of cluster " << j << ": " << maxDistCluster << endl;
-    	if (maxDistCluster <= maxDist){
-    		Eigen::Vector4f vecCentroid, maxDistVec;
+    	if (clusterDiameter <= maxDiameter){
+    		Eigen::Vector4f vecCentroid;
     		pcl::compute3DCentroid(*cloud_cluster, vecCentroid);
-    		pcl::getMaxDistance(*cloud_cluster, vecCentroid, maxDistVec);
-    		double radius = (vecCentroid - maxDistVec).norm();
     		//cerr << "Radius of cluster " << j << ": " << radius << endl;
     		//Cluster cluster(vecCentroid, radius);
-    		filteredCluster.push_back(Cluster(vecCentroid, radius));
+    		filteredCluster.push_back(Cluster(vecCentroid, clusterDiameter/2, minPt.z, maxPt.z));
+
+    		//** Making color for each cluster
+	    	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen); 
+			uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+			//** 
+    		for (size_t i = 0; i < cloud_cluster->points.size(); ++i){
+    			pcl::PointXYZRGB PtColored;
+      			makeColoredPoint(PtColored, cloud_cluster->points[i], rgb);
+      			debugCloud->points.push_back(PtColored);
+    		}
     		j++;
     	}
    	}
 }
 
-void PCLPoleDetector::segmenterLanda(double numCuts, double minPts, double maxPts, double clusterTolerance){
+void PCLPoleDetector::segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter){
 	list<Cluster> filteredCluster;
-	pcl::PointXYZ minPt , maxPt;
-  	pcl::getMinMax3D(*processCloud, minPt, maxPt);
-  	double maxHeight = maxPt.z;
-  	double minHeight = minPt.z;
-	double stepCut = (maxHeight - minHeight)/numCuts;
-	int j = 0;
-	int lastIterSize = 0;
-	double maxDiameter = 10; // For post-filtering. To remove very large unprobable clusters
-	for (int minCut = minHeight; minCut < maxHeight; minCut+=stepCut){
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud(new pcl::PointCloud<pcl::PointXYZ>);
-		cutBuilder(cutCloud, minCut, minCut+stepCut);
-		//** To visualize the cut (Random colour for each cut)
-		pointCloudVisualizer(cutCloud, "Cut Cloud" + boost::lexical_cast<string>(j));
+	vector<pcl::PointIndices> clusterIndices;
 
-		cerr << "Size of cut " << j << ": " << cutCloud->width * cutCloud->height << " data points." << endl;
-		vector<pcl::PointIndices> clusterIndices;
-		euclideanClusterExtractor(cutCloud, clusterIndices, minPts, maxPts, clusterTolerance);
-		cerr << "Number of clusters from cut " << j << ": " << clusterIndices.size() << endl;
-		clusterFilter(cutCloud, clusterIndices, maxDiameter, filteredCluster);
-		cerr << "Number of clusters from cut " << j << " after filtering: " << filteredCluster.size() - lastIterSize << endl;
-		lastIterSize = filteredCluster.size();
-		j++;
-	}
-	//pointCloudVisualizer(filteredCluster, 'r', "cluster");
+	cerr << "Size of preProcessed cloud: " << processCloud->width * processCloud->height << " data points." << endl;
+	euclideanClusterExtractor(clusterIndices, minPts, maxPts, clusterTolerance);
+	cerr << "Number of clusters found: " << clusterIndices.size() << endl;
+
+	//For post-filtering. To remove very large unprobable clusters
+	clusterFilter(clusterIndices, maxDiameter, filteredCluster);
+	cerr << "Number of clusters after filtering: " << filteredCluster.size() << endl;
 }
 
 void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, string name){
@@ -240,20 +229,21 @@ void PCLPoleDetector::pointCloudVisualizer(list<Cluster> const &clusterList, cha
 
 }
 
-void PCLPoleDetector::algorithmLanda(string pathToPCDFile, double numCuts, double distThresholdCluster){
+void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double minPts, double distThresholdCluster, double maxDiameter){
 	readPCD(pathToPCDFile);
 	double meanKNoise = 10;
 	double stdDevNoise = 1;
 	double distThresholdGround = 0.02;
 	// preProcessor(meanKNoise, stdDevNoise, distThresholdGround);
 
-	double minPts = 10;
 	double maxPts = 500;
-	segmenterLanda(numCuts, minPts, maxPts, distThresholdCluster);
+	segmenterSingleCut(minPts, maxPts, distThresholdCluster, maxDiameter);
 
 	writePCD("output_pcd.pcd");
+	/*
 	while (!viewer->wasStopped ()) { // Display the visualiser until 'q' key is pressed
     	viewer->spinOnce (100);
     	boost::this_thread::sleep (boost::posix_time::microseconds (100000));
 	}
+	*/
 }
