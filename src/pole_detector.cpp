@@ -16,11 +16,11 @@ PCLPoleDetector::~PCLPoleDetector(){
 }
 
 void PCLPoleDetector::readPCD(string pathToFile){
-	//pcl::PCDReader reader;
-	//reader.read (pathToFile, *inCloud);
-	pcl::io::loadPCDFile<pcl::PointXYZ>(pathToFile, *inCloud);
-	std::vector<int> indices;
-	pcl::removeNaNFromPointCloud(*inCloud, *inCloud, indices);
+	pcl::PCDReader reader;
+	reader.read (pathToFile, *inCloud);
+	// pcl::io::loadPCDFile<pcl::PointXYZ>(pathToFile, *inCloud);
+	// std::vector<int> indices;
+	// pcl::removeNaNFromPointCloud(*inCloud, *inCloud, indices);
 	// cerr << "PointCloud size before: " << inCloud->width * inCloud->height << " data points." << endl;
 	// Should I make a copy? Is the nmodified input cloud required at any other stage?
 	processCloud = inCloud;
@@ -28,7 +28,9 @@ void PCLPoleDetector::readPCD(string pathToFile){
 }
 
 void PCLPoleDetector::writePCD(string pathToFile){
-	pcl::io::savePCDFileASCII (pathToFile, *processCloud);
+	pcl::PCDWriter writer;
+	writer.writeBinary(pathToFile, *processCloud);
+	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
   	std::cerr << "Saved " << processCloud->points.size() << " data points to output_pcd.pcd." << std::endl;
 }
 
