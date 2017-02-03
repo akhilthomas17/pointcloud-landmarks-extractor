@@ -20,6 +20,7 @@ using namespace std;
 #include <pcl/common/common.h>
 #include <pcl/common/distances.h>
 #include <pcl/common/centroid.h>
+#include <pcl/common/angles.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/sample_consensus/method_types.h>
@@ -31,20 +32,49 @@ using namespace std;
 class Cluster
 {
 public:
-	Cluster(Eigen::Vector4f centroid_, double radius_, double zMin_, double zMax_):
-	centroid(centroid_), 
-	radius(radius_),
-	zMin(zMin_),
-	zMax(zMax_){}
+	Cluster(Eigen::Vector4f centroid_, double radius_, double zMin_, double zMax_, pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud_);
+	Cluster();
 	~Cluster(){}
-	Eigen::Vector4f getCentroid(){return centroid;}
-	double getRadius(){return radius;}
+	Eigen::Vector4f const& getCentroid(){return centroid;}
+	double const& getRadius(){return radius;}
+	double const& getZMin(){return zMin;}
+	double const& getZMax(){return zMax;}
+	pcl::PointCloud<pcl::PointXYZ>::Ptr getClusterCloud(){return clusterCloud;}
+	bool const& isProcessed(){return processed;}
+	void markProcessed(){processed = true;}
 
 private:
 	Eigen::Vector4f centroid;
 	double radius;
 	double zMin;
 	double zMax;
+	bool processed;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud;
+	
+};
+
+
+class Segment
+{
+public:
+	Segment();
+	~Segment(){segmentParts.clear();};
+	void addCluster(Cluster& cluster);
+	double getHeight(){return height;}
+	double getZMax(){return zMax;}
+	double getZMin(){return zMin;}
+	list<Cluster>& getSegmentParts(){return segmentParts;}
+	Eigen::Vector4f getCentroid(){return centroid;}
+	Eigen::Vector4f getBase(){return base;}
+
+private:
+	list<Cluster> segmentParts;
+	Eigen::Vector4f centroid;
+	double height;
+	double zMin;
+	double zMax;
+	Eigen::Vector4f base;
+	
 };
 
 
@@ -54,10 +84,12 @@ public:
     PCLPoleDetector();
     ~PCLPoleDetector();
     void pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, string name);
-    void pointCloudVisualizer(list<Cluster> const &clusterList, char colour, string id);
+    void pointCloudVisualizer(list<Cluster> const &clusterList, string id);
+    void pointCloudVisualizer(Cluster &cluster, string id);
+    void stitcherAndDetector(double angleToVertical, double maxDistanceStitches, double minPoleHeight);
     void segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter);
     void preProcessor(double meanKNoise, double stdDevNoise, double distThreshold);
-    void algorithmSingleCut(string pathToPCDFile, double minPts, double distThresholdCluster, double maxDiameter);
+    void algorithmSingleCut(string pathToPCDFile, double angleToVertical, double maxDistanceStitches, double minPoleHeight);
 
 private:
 	void readPCD(string pathToFile);
@@ -65,13 +97,14 @@ private:
     void groundPlaneRemover(double distThreshold);
     void statistical_outlier_remover(double mean, double sigma);
 	void euclideanClusterExtractor(vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
-	void clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDiameter, list<Cluster> &filteredCluster);
+	void clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDiameter);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr inCloud;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud;
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr debugCloud;
 	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 	boost::random::mt19937 randomGen;
+	list<Cluster> filteredCluster;
 };
 
 #endif
