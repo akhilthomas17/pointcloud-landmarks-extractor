@@ -130,7 +130,7 @@ void PCLPoleDetector::writePCD(string pathToFile){
 }
 
 
-void PCLPoleDetector::statistical_outlier_remover(double mean, double stdDev){
+void PCLPoleDetector::statisticalOutlierRemover(double mean, double stdDev){
 	// Create the filtering object
 	pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
 	sor.setInputCloud (processCloud);
@@ -187,7 +187,7 @@ void PCLPoleDetector::groundPlaneRemover(double distThreshold){
 void PCLPoleDetector::preProcessor(double meanKNoise, double stdDevNoise, double distThreshold){
   	// Filtering the point cloud to remove outliers
   	// The mean and stdDev values have to be tuned for the particular case
-  	statistical_outlier_remover(meanKNoise, stdDevNoise);
+  	statisticalOutlierRemover(meanKNoise, stdDevNoise);
   	pcl::PointXYZ minPt , maxPt;
   	pcl::getMinMax3D(*processCloud, minPt, maxPt);
 
@@ -195,6 +195,72 @@ void PCLPoleDetector::preProcessor(double meanKNoise, double stdDevNoise, double
   	cerr << "PointCloud size after noise removal: " << processCloud->width * processCloud->height << " data points." << endl;
   	groundPlaneRemover(distThreshold);
   	cerr << "PointCloud size after ground plane removal: " << processCloud->width * processCloud->height << " data points." << endl;
+}
+
+void PCLPoleDetector::DONBuilder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double scaleSmall, double scaleLarge){
+	// Create a search tree, use KDTreee for non-organized data.
+  	pcl::search::Search<pcl::PointXYZ>::Ptr tree;
+  	if (processCloud->isOrganized ()){
+    	tree.reset (new pcl::search::OrganizedNeighbor<pcl::PointXYZ> ());
+  	}
+  	else{
+    	tree.reset (new pcl::search::KdTree<pcl::PointXYZ> (false));
+  	}
+
+  	// Set the input pointcloud for the search tree
+  	tree->setInputCloud (processCloud);
+
+  	if (scaleSmall >= scaleLarge){
+    	cerr << "Error: Large scale must be > small scale!" << endl;
+    	exit (EXIT_FAILURE);
+  	}
+
+  	// Compute normals using both small and large scales at each point
+  	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::PointNormal> ne;
+  	ne.setInputCloud (processCloud);
+  	ne.setSearchMethod (tree);
+
+  	/**
+   	* NOTE: setting viewpoint is very important, so that we can ensure
+   	* normals are all pointed in the same direction!
+   	*/
+  	ne.setViewPoint (std::numeric_limits<float>::max (), std::numeric_limits<float>::max (), std::numeric_limits<float>::max ());
+
+  	// calculate normals with the small scale
+  	cout << "Calculating normals for scale..." << scaleSmall << endl;
+  	pcl::PointCloud<pcl::PointNormal>::Ptr normals_small_scale (new pcl::PointCloud<pcl::PointNormal>);
+
+  	ne.setRadiusSearch (scaleSmall);
+  	ne.compute (*normals_small_scale);
+
+  	// calculate normals with the large scale
+  	cout << "Calculating normals for scale..." << scaleLarge << endl;
+  	pcl::PointCloud<pcl::PointNormal>::Ptr normals_large_scale (new pcl::PointCloud<pcl::PointNormal>);
+
+  	ne.setRadiusSearch (scaleLarge);
+  	ne.compute (*normals_large_scale);
+
+  	cout << "Calculating DoN... " << endl;
+  	// Create DoN operator
+  	pcl::DifferenceOfNormalsEstimation<pcl::PointXYZ, pcl::PointNormal, pcl::PointNormal> don;
+  	don.setInputCloud (processCloud);
+  	don.setNormalScaleLarge (normals_large_scale);
+  	don.setNormalScaleSmall (normals_small_scale);
+
+  	if (!don.initCompute ())
+  	{
+    	std::cerr << "Error: Could not intialize DoN feature operator" << std::endl;
+    	exit (EXIT_FAILURE);
+  	}
+
+  	// Compute DoN
+  	don.computeFeature (*donCloud);
+
+  	/* To write DON cloud to file, uncomment below 
+  	// Save DoN features
+  	pcl::PCDWriter writer;
+ 	writer.write<pcl::PointNormal> ("don.pcd", *donCloud, false); 
+	*/
 }
 
 
@@ -209,6 +275,20 @@ void PCLPoleDetector::euclideanClusterExtractor(vector<pcl::PointIndices> &clust
   	ec.setMaxClusterSize (maxClusterSize);
   	ec.setSearchMethod (tree);
   	ec.setInputCloud (processCloud);
+  	ec.extract (clusterIndices);
+}
+
+void PCLPoleDetector::euclideanClusterExtractor(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance){
+	// Creating the KdTree object for the search method of the extraction
+  	pcl::search::KdTree<pcl::PointNormal>::Ptr tree (new pcl::search::KdTree<pcl::PointNormal>);
+  	tree->setInputCloud (donCloud);
+
+  	pcl::EuclideanClusterExtraction<pcl::PointNormal> ec;
+  	ec.setClusterTolerance (clusterTolerance);
+  	ec.setMinClusterSize (minClusterSize);
+  	ec.setMaxClusterSize (maxClusterSize);
+  	ec.setSearchMethod (tree);
+  	ec.setInputCloud (donCloud);
   	ec.extract (clusterIndices);
 }
 
@@ -242,7 +322,7 @@ void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndi
     		//Cluster cluster(vecCentroid, radius);
     		filteredCluster.push_back(Cluster(vecCentroid, clusterDiameter/2, minPt.z, maxPt.z, cloud_cluster));
 
-    		/* Uncomment to save the un-stitched clusters
+    		///* Uncomment to save the un-stitched clusters
     		//** Making color for each cluster
 	    	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen); 
 			uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
@@ -252,12 +332,29 @@ void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndi
       			makeColoredPoint(PtColored, cloud_cluster->points[i], rgb);
       			debugCloud->points.push_back(PtColored);
     		}
-    		*/
+    		//*/
     		j++;
     	}
    	}
 }
 
+void PCLPoleDetector::segmenterDON(double minPts, double maxPts, double clusterTolerance, double scaleLarge, double scaleSmall){
+	// Create output cloud for DoN results
+	cerr << "Size of preProcessed cloud: " << processCloud->width * processCloud->height << " data points." << endl;
+  	pcl::PointCloud<pcl::PointNormal>::Ptr donCloud (new pcl::PointCloud<pcl::PointNormal>);
+  	pcl::copyPointCloud<pcl::PointXYZ, pcl::PointNormal>(*processCloud, *donCloud);
+  	DONBuilder(donCloud, scaleLarge, scaleSmall);
+
+  	vector<pcl::PointIndices> clusterIndices;
+  	euclideanClusterExtractor(donCloud, clusterIndices, minPts, maxPts, clusterTolerance);
+	cerr << "Number of clusters found: " << clusterIndices.size() << endl;
+
+	clusterFilter(clusterIndices, 50);
+	cerr << "Number of clusters after filtering: " << filteredCluster.size() << endl;
+
+	
+
+}
 
 void PCLPoleDetector::segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter){
 	vector<pcl::PointIndices> clusterIndices;
@@ -347,7 +444,7 @@ void PCLPoleDetector::stitcherAndDetector(double angleToVertical, double maxDist
 }
 
 
-void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double angleToVertical, double maxDistanceStitches, double minPoleHeight){
+void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double scaleSmall, double scaleLarge){
 	readPCD(pathToPCDFile);
 	double meanKNoise = 10;
 	double stdDevNoise = 1;
@@ -357,10 +454,13 @@ void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double angleToVer
 	double maxPts = 500;
 	double minPts = 15;
 	double distThresholdCluster = 0.3;
-	double maxDiameter = 1;
-	segmenterSingleCut(minPts, maxPts, distThresholdCluster, maxDiameter);
+	// double maxDiameter = 1;
+	// segmenterSingleCut(minPts, maxPts, distThresholdCluster, maxDiameter);
 
-	stitcherAndDetector(angleToVertical, maxDistanceStitches, minPoleHeight);
+	segmenterDON(minPts, maxPts, distThresholdCluster, scaleSmall, scaleLarge);
+
+
+	// stitcherAndDetector(angleToVertical, maxDistanceStitches, minPoleHeight);
 
 	writePCD("output_pcd.pcd");
 	/*

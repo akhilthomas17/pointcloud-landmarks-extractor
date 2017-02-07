@@ -6,7 +6,6 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 
-
 using namespace std;
 
 // PCL specific include files:
@@ -26,8 +25,13 @@ using namespace std;
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
-#include <pcl/kdtree/kdtree.h>
 #include <pcl/segmentation/extract_clusters.h>
+#include <pcl/search/organized.h>
+#include <pcl/search/kdtree.h>
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/features/don.h>
+
+
 
 class Cluster
 {
@@ -89,15 +93,19 @@ public:
     void stitcherAndDetector(double angleToVertical, double maxDistanceStitches, double minPoleHeight);
     void segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter);
     void preProcessor(double meanKNoise, double stdDevNoise, double distThreshold);
-    void algorithmSingleCut(string pathToPCDFile, double angleToVertical, double maxDistanceStitches, double minPoleHeight);
+    void segmenterDON(double minPts, double maxPts, double clusterTolerance, double scaleLarge, double scaleSmall);
+    void algorithmSingleCut(string pathToPCDFile, double scaleSmall, double scaleLarge);
 
 private:
 	void readPCD(string pathToFile);
     void writePCD(string pathToFile);
     void groundPlaneRemover(double distThreshold);
-    void statistical_outlier_remover(double mean, double sigma);
+    void statisticalOutlierRemover(double mean, double sigma);
 	void euclideanClusterExtractor(vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
+	void euclideanClusterExtractor(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
 	void clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDiameter);
+	void DONBuilder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double scaleSmall, double scaleLarge);
+	void DONFilter(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double thesholdDON);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr inCloud;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud;
