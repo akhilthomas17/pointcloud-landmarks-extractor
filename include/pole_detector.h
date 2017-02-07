@@ -94,7 +94,7 @@ public:
     void segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter);
     void preProcessor(double meanKNoise, double stdDevNoise, double distThreshold);
     void segmenterDON(double minPts, double maxPts, double clusterTolerance, double scaleLarge, double scaleSmall);
-    void algorithmSingleCut(string pathToPCDFile, double scaleSmall, double scaleLarge);
+    void algorithmSingleCut(string pathToPCDFile, double angleToVertical, double maxDistanceStitches, double minPoleHeight);
 
 private:
 	void readPCD(string pathToFile);

@@ -322,7 +322,7 @@ void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndi
     		//Cluster cluster(vecCentroid, radius);
     		filteredCluster.push_back(Cluster(vecCentroid, clusterDiameter/2, minPt.z, maxPt.z, cloud_cluster));
 
-    		///* Uncomment to save the un-stitched clusters
+    		/* Uncomment to save the un-stitched clusters
     		//** Making color for each cluster
 	    	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen); 
 			uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
@@ -351,8 +351,6 @@ void PCLPoleDetector::segmenterDON(double minPts, double maxPts, double clusterT
 
 	clusterFilter(clusterIndices, 50);
 	cerr << "Number of clusters after filtering: " << filteredCluster.size() << endl;
-
-	
 
 }
 
@@ -444,7 +442,7 @@ void PCLPoleDetector::stitcherAndDetector(double angleToVertical, double maxDist
 }
 
 
-void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double scaleSmall, double scaleLarge){
+void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double angleToVertical, double maxDistanceStitches, double minPoleHeight){
 	readPCD(pathToPCDFile);
 	double meanKNoise = 10;
 	double stdDevNoise = 1;
@@ -456,11 +454,13 @@ void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double scaleSmall
 	double distThresholdCluster = 0.3;
 	// double maxDiameter = 1;
 	// segmenterSingleCut(minPts, maxPts, distThresholdCluster, maxDiameter);
+	double scaleSmall = 0.1;
+	double scaleLarge = 0.4;
 
 	segmenterDON(minPts, maxPts, distThresholdCluster, scaleSmall, scaleLarge);
 
 
-	// stitcherAndDetector(angleToVertical, maxDistanceStitches, minPoleHeight);
+	stitcherAndDetector(angleToVertical, maxDistanceStitches, minPoleHeight);
 
 	writePCD("output_pcd.pcd");
 	/*
