@@ -15,6 +15,7 @@ using namespace std;
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/filters/conditional_removal.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/common.h>
 #include <pcl/common/distances.h>
@@ -95,11 +96,12 @@ public:
     void stitcherAndDetector(double angleToVertical, double maxDistanceStitches, double minPoleHeight);
     void segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter);
     void preProcessor(double meanKNoise, double stdDevNoise, double distThreshold);
-    void segmenterDON(double minPts, double maxPts, double clusterTolerance, double scaleLarge, double scaleSmall);
-    void algorithmSingleCut(string pathToPCDFile, double angleToVertical, double maxDistanceStitches, double minPoleHeight);
+    void segmenterDON(double minPts, double maxPts, double clusterTolerance, double scaleSmall, double scaleLarge, double thresholdDON);
+    void algorithmSingleCut(string pathToPCDFile, double angleToVertical, double maxDistanceStitches, double minPoleHeight, double scaleSmall, double scaleLarge);
 
 private:
 	void readPCD(string pathToFile);
+	void readDON(string pathToFile);
     void writePCD(string pathToFile);
     void groundPlaneRemover(double distThreshold);
     void statisticalOutlierRemover(double mean, double sigma);
@@ -107,11 +109,13 @@ private:
 	void euclideanClusterExtractor(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
 	void clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDiameter);
 	void DONBuilder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double scaleSmall, double scaleLarge);
-	void DONFilter(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double thesholdDON);
+	void DONThresholder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double thresholdDON);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr inCloud;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud;
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr debugCloud;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr poleCloud;
+	pcl::PointCloud<pcl::PointNormal>::Ptr _donCloud;
 	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 	boost::random::mt19937 randomGen;
 	list<Cluster> filteredCluster;
