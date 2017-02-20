@@ -99,6 +99,7 @@ public:
 
 private:
 	void readPCD(string pathToFile);
+	void readDON(string pathToFile);
     void writePCD(string pathToFile);
     void groundPlaneRemover(double distThreshold);
     void statisticalOutlierRemover(double mean, double sigma);
@@ -106,11 +107,12 @@ private:
 	void euclideanClusterExtractor(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
 	void clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDiameter);
 	void DONBuilder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double scaleSmall, double scaleLarge);
-	void DONThresholder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double thresholdDON);
+	void DONThresholder(double thresholdDON);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr inCloud;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud;
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr debugCloud;
+	pcl::PointCloud<pcl::PointNormal>::Ptr donCloud;
 	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 	boost::random::mt19937 randomGen;
 	list<Cluster> filteredCluster;

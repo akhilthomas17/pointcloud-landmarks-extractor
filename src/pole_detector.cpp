@@ -67,6 +67,7 @@ PCLPoleDetector::PCLPoleDetector(){
 	inCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
 	processCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
 	debugCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+	donCloud = pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>);
 	/*
 	viewer = boost::shared_ptr<pcl::visualization::PCLVisualizer> (new pcl::visualization::PCLVisualizer ("Pole Detector"));
 	viewer->setBackgroundColor (0, 0, 0);
@@ -123,6 +124,10 @@ void PCLPoleDetector::readPCD(string pathToFile){
 	// pointCloudVisualizer(inCloud, 'r', "Input cloud");
 }
 
+void PCLPoleDetector::readDON(string pathToFile){
+	pcl::PCDReader reader;
+	reader.read(pathToFile, *donCloud);
+}
 
 void PCLPoleDetector::writePCD(string pathToFile){
 	pcl::PCDWriter writer;
@@ -265,7 +270,7 @@ void PCLPoleDetector::DONBuilder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud
 	//*/
 }
 
-void PCLPoleDetector::DONThresholder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double thresholdDON){
+void PCLPoleDetector::DONThresholder(double thresholdDON){
 	// Implementing the thesholding of DON
 	// Build the condition for filtering
 	pcl::ConditionOr<pcl::PointNormal>::Ptr range_cond (
@@ -365,21 +370,18 @@ void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndi
 }
 
 void PCLPoleDetector::segmenterDON(double minPts, double maxPts, double clusterTolerance, double scaleLarge, double scaleSmall, double thresholdDON){
-	// Create output cloud for DoN results
-	cerr << "Size of preProcessed cloud: " << processCloud->width * processCloud->height << " data points." << endl;
-  	pcl::PointCloud<pcl::PointNormal>::Ptr donCloud (new pcl::PointCloud<pcl::PointNormal>);
-  	pcl::copyPointCloud<pcl::PointXYZ, pcl::PointNormal>(*processCloud, *donCloud);
-  	DONBuilder(donCloud, scaleLarge, scaleSmall);
-  	//DONThresholder(donCloud, thresholdDON);
-
+	
+  	// pcl::copyPointCloud<pcl::PointXYZ, pcl::PointNormal>(*processCloud, *donCloud);
+  	// DONBuilder(donCloud, scaleLarge, scaleSmall);
+  	DONThresholder(thresholdDON);
+	/*
   	vector<pcl::PointIndices> clusterIndices;
   	euclideanClusterExtractor(donCloud, clusterIndices, minPts, maxPts, scaleLarge);
 	cerr << "Number of clusters found: " << clusterIndices.size() << endl;
 
 	clusterFilter(clusterIndices, 100);
 	cerr << "Number of clusters after filtering: " << filteredCluster.size() << endl;
-
-	
+	//*/
 
 }
 
@@ -472,7 +474,11 @@ void PCLPoleDetector::stitcherAndDetector(double angleToVertical, double maxDist
 
 
 void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double scaleSmall, double scaleLarge, double thresholdDON){
-	readPCD(pathToPCDFile);
+	
+	// readPCD(pathToPCDFile);
+	readDON(pathToPCDFile);
+	cerr << "Size of DON input cloud: " << donCloud->width * donCloud->height << " data points." << endl;
+
 	double meanKNoise = 10;
 	double stdDevNoise = 1;
 	double distThresholdGround = 0.02;
@@ -489,7 +495,7 @@ void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double scaleSmall
 
 	// stitcherAndDetector(angleToVertical, maxDistanceStitches, minPoleHeight);
 
-	writePCD("output_pcd.pcd");
+	// writePCD("output_pcd.pcd");
 	/*
 	while (!viewer->wasStopped ()) { // Display the visualiser until 'q' key is pressed
     	viewer->spinOnce (100);
