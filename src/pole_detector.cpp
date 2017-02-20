@@ -67,9 +67,11 @@ PCLPoleDetector::PCLPoleDetector(){
 	inCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
 	processCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
 	debugCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+	/*
 	viewer = boost::shared_ptr<pcl::visualization::PCLVisualizer> (new pcl::visualization::PCLVisualizer ("Pole Detector"));
 	viewer->setBackgroundColor (0, 0, 0);
 	viewer->addCoordinateSystem (3.0, "coordinates", 0);
+	//*/
 }
 
 
@@ -256,11 +258,36 @@ void PCLPoleDetector::DONBuilder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud
   	// Compute DoN
   	don.computeFeature (*donCloud);
 
-  	/* To write DON cloud to file, uncomment below 
+  	//* To write DON cloud to file, uncomment below 
   	// Save DoN features
   	pcl::PCDWriter writer;
  	writer.write<pcl::PointNormal> ("don.pcd", *donCloud, false); 
-	*/
+	//*/
+}
+
+void PCLPoleDetector::DONThresholder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double thresholdDON){
+	// Implementing the thesholding of DON
+	// Build the condition for filtering
+	pcl::ConditionOr<pcl::PointNormal>::Ptr range_cond (
+	new pcl::ConditionOr<pcl::PointNormal> ()
+	);
+	range_cond->addComparison (pcl::FieldComparison<pcl::PointNormal>::ConstPtr (
+	                       new pcl::FieldComparison<pcl::PointNormal> ("curvature", pcl::ComparisonOps::GT, thresholdDON))
+	                     );
+	// Build the filter
+	pcl::ConditionalRemoval<pcl::PointNormal> condrem;
+	condrem.setCondition(range_cond);
+	condrem.setInputCloud (donCloud);
+
+	// Apply filter
+	condrem.filter (*donCloud);
+
+	// Save filtered output
+	std::cout << "Filtered Pointcloud: " << donCloud->points.size () << " data points." << std::endl;
+
+	pcl::PCDWriter writer;
+	writer.write<pcl::PointNormal> ("don_filtered.pcd", *donCloud, false); 
+
 }
 
 
@@ -338,18 +365,19 @@ void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndi
    	}
 }
 
-void PCLPoleDetector::segmenterDON(double minPts, double maxPts, double clusterTolerance, double scaleLarge, double scaleSmall){
+void PCLPoleDetector::segmenterDON(double minPts, double maxPts, double clusterTolerance, double scaleLarge, double scaleSmall, double thresholdDON){
 	// Create output cloud for DoN results
 	cerr << "Size of preProcessed cloud: " << processCloud->width * processCloud->height << " data points." << endl;
   	pcl::PointCloud<pcl::PointNormal>::Ptr donCloud (new pcl::PointCloud<pcl::PointNormal>);
   	pcl::copyPointCloud<pcl::PointXYZ, pcl::PointNormal>(*processCloud, *donCloud);
   	DONBuilder(donCloud, scaleLarge, scaleSmall);
+  	//DONThresholder(donCloud, thresholdDON);
 
   	vector<pcl::PointIndices> clusterIndices;
-  	euclideanClusterExtractor(donCloud, clusterIndices, minPts, maxPts, clusterTolerance);
+  	euclideanClusterExtractor(donCloud, clusterIndices, minPts, maxPts, scaleLarge);
 	cerr << "Number of clusters found: " << clusterIndices.size() << endl;
 
-	clusterFilter(clusterIndices, 50);
+	clusterFilter(clusterIndices, 100);
 	cerr << "Number of clusters after filtering: " << filteredCluster.size() << endl;
 
 	
@@ -444,7 +472,7 @@ void PCLPoleDetector::stitcherAndDetector(double angleToVertical, double maxDist
 }
 
 
-void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double scaleSmall, double scaleLarge){
+void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double scaleSmall, double scaleLarge, double thresholdDON){
 	readPCD(pathToPCDFile);
 	double meanKNoise = 10;
 	double stdDevNoise = 1;
@@ -457,7 +485,7 @@ void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double scaleSmall
 	// double maxDiameter = 1;
 	// segmenterSingleCut(minPts, maxPts, distThresholdCluster, maxDiameter);
 
-	segmenterDON(minPts, maxPts, distThresholdCluster, scaleSmall, scaleLarge);
+	segmenterDON(minPts, maxPts, distThresholdCluster, scaleSmall, scaleLarge, thresholdDON);
 
 
 	// stitcherAndDetector(angleToVertical, maxDistanceStitches, minPoleHeight);
