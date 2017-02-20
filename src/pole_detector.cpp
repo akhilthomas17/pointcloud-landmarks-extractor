@@ -261,7 +261,7 @@ void PCLPoleDetector::DONBuilder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud
   	//* To write DON cloud to file, uncomment below 
   	// Save DoN features
   	pcl::PCDWriter writer;
- 	writer.write<pcl::PointNormal> ("don.pcd", *donCloud, false); 
+ 	writer.write<pcl::PointNormal> ("don.pcd", *donCloud, true); 
 	//*/
 }
 
@@ -284,9 +284,8 @@ void PCLPoleDetector::DONThresholder(pcl::PointCloud<pcl::PointNormal>::Ptr donC
 
 	// Save filtered output
 	std::cout << "Filtered Pointcloud: " << donCloud->points.size () << " data points." << std::endl;
-
 	pcl::PCDWriter writer;
-	writer.write<pcl::PointNormal> ("don_filtered.pcd", *donCloud, false); 
+	writer.write<pcl::PointNormal> ("don_filtered.pcd", *donCloud, true); 
 
 }
 
