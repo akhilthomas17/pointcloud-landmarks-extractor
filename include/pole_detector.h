@@ -63,6 +63,7 @@ class Segment
 public:
 	Segment();
 	~Segment(){segmentParts.clear();};
+	void mergeSegment(Segment& segment);
 	void addCluster(Cluster& cluster);
 	double getHeight(){return height;}
 	double getZMax(){return zMax;}
@@ -90,6 +91,7 @@ public:
     void pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, string name);
     void pointCloudVisualizer(list<Cluster> const &clusterList, string id);
     void pointCloudVisualizer(Cluster &cluster, string id);
+    void treeExtractor(double maxDistanceTrees);
     void stitcherAndDetector(double angleToVertical, double maxDistanceStitches, double minPoleHeight);
     void segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter);
     void preProcessor(double meanKNoise, double stdDevNoise, double distThreshold);
@@ -113,6 +115,8 @@ private:
 	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 	boost::random::mt19937 randomGen;
 	list<Cluster> filteredCluster;
+	list<Segment> detectedPoles;
+	list<Segment> extractedTrees;
 };
 
 #endif
