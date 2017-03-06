@@ -147,12 +147,15 @@ void PCLPoleDetector::readDON(string pathToFile){
 
 void PCLPoleDetector::writePCD(string pathToFile){
 	pcl::PCDWriter writer;
-	writer.writeBinary("trees.pcd", *debugCloud);
+	writer.writeBinary("output.pcd", *debugCloud);
 	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
-  	std::cerr << "Saved " << debugCloud->points.size() << " data points to trees.pcd." << std::endl;
+  	std::cerr << "Saved " << debugCloud->points.size() << " data points to output.pcd." << std::endl;
+  	/*
   	writer.writeBinary("poles.pcd", *poleCloud);
 	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
   	std::cerr << "Saved " << poleCloud->points.size() << " data points to poles.pcd." << std::endl;
+  	//*/
+
 }
 
 
@@ -390,7 +393,7 @@ void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndi
    	}
 }
 
-void PCLPoleDetector::segmenterDON(double minPts, double maxPts, double clusterTolerance, double scaleSmall, double scaleLarge, double thresholdDON){
+void PCLPoleDetector::segmenterDON(double minPts, double maxPts, double xyBoundThreshold, double scaleSmall, double scaleLarge, double thresholdDON){
 	// Create output cloud for DoN results
   	//pcl::PointCloud<pcl::PointNormal>::Ptr donCloud (new pcl::PointCloud<pcl::PointNormal>);
   	//pcl::copyPointCloud<pcl::PointXYZ, pcl::PointNormal>(*processCloud, *donCloud);
@@ -405,7 +408,7 @@ void PCLPoleDetector::segmenterDON(double minPts, double maxPts, double clusterT
   	euclideanClusterExtractor(donCloud, clusterIndices, minPts, maxPts, scaleSmall);
 	cerr << "Number of clusters found: " << clusterIndices.size() << endl;
 
-	clusterFilter(clusterIndices, 20);
+	clusterFilter(clusterIndices, xyBoundThreshold);
 	cerr << "Number of clusters after filtering: " << filteredCluster.size() << endl;
 }
 
@@ -477,7 +480,7 @@ void PCLPoleDetector::stitcherAndDetector(double angleToVertical, double maxDist
 			if (candidatePole.getHeight() > minPoleHeight){
 				detectedPoles.push_back(candidatePole);
 				numClusters += candidatePole.getSegmentParts().size();
-				/* Uncomment to plot single cloud
+				//* Uncomment to plot single cloud
 				//** Making single color for each detected pole
 				uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
 				uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
@@ -554,7 +557,7 @@ void PCLPoleDetector::treeExtractor(double maxDistanceTrees){
 }
 
 
-void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double maxDistanceStitches, double minPoleHeight, double maxDistanceTrees, double scaleSmall, double scaleLarge){
+void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double xyBoundThreshold, double maxDistanceStitches, double minPoleHeight, double scaleSmall){
 	//readPCD(pathToPCDFile);
 	readDON(pathToPCDFile);
 	double meanKNoise = 10;
@@ -564,17 +567,18 @@ void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double maxDistanc
 
 	double maxPts = 50000;
 	double minPts = 15;
-	double distThresholdCluster = 0.3;
+	// double distThresholdCluster = 0.3;
 	// double maxDiameter = 1;
 	// segmenterSingleCut(minPts, maxPts, distThresholdCluster, maxDiameter);
 
 	double thresholdDON = 0.25;
-	segmenterDON(minPts, maxPts, distThresholdCluster, scaleSmall, scaleLarge, thresholdDON);
+	double scaleLarge = 1;
+	segmenterDON(minPts, maxPts, xyBoundThreshold, scaleSmall, scaleLarge, thresholdDON);
 
 
 	double angleToVertical = 0.35;
 	stitcherAndDetector(angleToVertical, maxDistanceStitches, minPoleHeight);
-	treeExtractor(maxDistanceTrees);
+	//treeExtractor(maxDistanceTrees);
 
 	writePCD("output_pcd.pcd");
 	/*

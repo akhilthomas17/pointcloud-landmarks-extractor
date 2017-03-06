@@ -96,8 +96,8 @@ public:
     void stitcherAndDetector(double angleToVertical, double maxDistanceStitches, double minPoleHeight);
     void segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter);
     void preProcessor(double meanKNoise, double stdDevNoise, double distThreshold);
-    void segmenterDON(double minPts, double maxPts, double clusterTolerance, double scaleSmall, double scaleLarge, double thresholdDON);
-    void algorithmSingleCut(string pathToPCDFile, double angleToVertical, double maxDistanceStitches, double minPoleHeight, double scaleSmall, double scaleLarge);
+    void segmenterDON(double minPts, double maxPts, double xyBoundThreshold, double scaleSmall, double scaleLarge, double thresholdDON);
+    void algorithmSingleCut(string pathToPCDFile, double xyBoundThreshold, double maxDistanceStitches, double minPoleHeight, double scaleSmall);
 
 private:
 	void readPCD(string pathToFile);
