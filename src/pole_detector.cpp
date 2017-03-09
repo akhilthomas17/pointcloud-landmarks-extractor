@@ -147,10 +147,10 @@ void PCLPoleDetector::readDON(string pathToFile){
 
 void PCLPoleDetector::writePCD(string pathToFile){
 	pcl::PCDWriter writer;
-	writer.writeBinary("output.pcd", *debugCloud);
+	writer.writeBinary("clusters.pcd", *debugCloud);
 	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
-  	std::cerr << "Saved " << debugCloud->points.size() << " data points to output.pcd." << std::endl;
-  	/*
+  	std::cerr << "Saved " << debugCloud->points.size() << " data points to clusters.pcd." << std::endl;
+  	//*
   	writer.writeBinary("poles.pcd", *poleCloud);
 	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
   	std::cerr << "Saved " << poleCloud->points.size() << " data points to poles.pcd." << std::endl;
@@ -167,6 +167,7 @@ void PCLPoleDetector::statisticalOutlierRemover(double mean, double stdDev){
 	sor.setStddevMulThresh (stdDev);
 	sor.filter (*processCloud);
 }
+
 
 
 void PCLPoleDetector::groundPlaneRemover(double distThreshold){
@@ -312,7 +313,7 @@ void PCLPoleDetector::DONThresholder(pcl::PointCloud<pcl::PointNormal>::Ptr donC
 	
 	std::cout << "Filtered Pointcloud: " << donCloud->points.size () << " data points." << std::endl;
 	// Save filtered output
-	/*
+	//*
 	pcl::PCDWriter writer;
 	writer.write<pcl::PointNormal> ("don_filtered.pcd", *donCloud, true); 
 	//*/
@@ -377,7 +378,7 @@ void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndi
     		//Cluster cluster(vecCentroid, radius);
     		filteredCluster.push_back(Cluster(vecCentroid, clusterDiameter/2, minPt.z, maxPt.z, cloud_cluster));
 
-    		/* Uncomment to save the un-stitched clusters
+    		//* Uncomment to save the un-stitched clusters
     		//** Making color for each cluster
 	    	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen); 
 			uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
@@ -488,7 +489,7 @@ void PCLPoleDetector::stitcherAndDetector(double angleToVertical, double maxDist
 					for (size_t i = 0; i < it->getClusterCloud()->points.size(); ++i){
 						pcl::PointXYZRGB PtColored;
 	  					makeColoredPoint(PtColored, it->getClusterCloud()->points[i], rgb);
-	  					debugCloud->points.push_back(PtColored);
+	  					poleCloud->points.push_back(PtColored);
 					}
 				}
 				//*/
