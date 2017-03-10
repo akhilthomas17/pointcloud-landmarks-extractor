@@ -37,13 +37,15 @@ using namespace std;
 class Cluster
 {
 public:
-	Cluster(Eigen::Vector4f centroid_, double radius_, double zMin_, double zMax_, pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud_);
+	Cluster(Eigen::Vector4f centroid_, double radius_, pcl::PointXYZ minPt_, pcl::PointXYZ maxPt_, pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud_);
 	Cluster();
 	~Cluster(){}
 	Eigen::Vector4f const& getCentroid(){return centroid;}
 	double const& getRadius(){return radius;}
-	double const& getZMin(){return zMin;}
-	double const& getZMax(){return zMax;}
+	double getZMin(){return minPt.z;}
+	double getZMax(){return maxPt.z;}
+	pcl::PointXYZ const& getMinPt(){return minPt;}
+	pcl::PointXYZ const& getMaxPt(){return maxPt;}
 	pcl::PointCloud<pcl::PointXYZ>::Ptr getClusterCloud(){return clusterCloud;}
 	bool const& isProcessed(){return processed;}
 	void markProcessed(){processed = true;}
@@ -51,8 +53,8 @@ public:
 private:
 	Eigen::Vector4f centroid;
 	double radius;
-	double zMin;
-	double zMax;
+	pcl::PointXYZ minPt;
+	pcl::PointXYZ maxPt;
 	bool processed;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud;
 	
@@ -67,8 +69,10 @@ public:
 	void mergeSegment(Segment& segment);
 	void addCluster(Cluster& cluster);
 	double getHeight(){return height;}
-	double getZMax(){return zMax;}
-	double getZMin(){return zMin;}
+	double getZMax(){return maxPt.z;}
+	double getZMin(){return minPt.z;}
+	pcl::PointXYZ const& getMinPt(){return minPt;}
+	pcl::PointXYZ const& getMaxPt(){return maxPt;}
 	list<Cluster>& getSegmentParts(){return segmentParts;}
 	Eigen::Vector4f getCentroid(){return centroid;}
 	Eigen::Vector4f getBase(){return base;}
@@ -77,8 +81,8 @@ private:
 	list<Cluster> segmentParts;
 	Eigen::Vector4f centroid;
 	double height;
-	double zMin;
-	double zMax;
+	pcl::PointXYZ minPt;
+	pcl::PointXYZ maxPt;
 	Eigen::Vector4f base;
 	
 };
@@ -92,11 +96,12 @@ public:
     void pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, string name);
     void pointCloudVisualizer(list<Cluster> const &clusterList, string id);
     void pointCloudVisualizer(Cluster &cluster, string id);
-    void treeExtractor(double maxDistanceTrees);
-    void stitcherAndDetector(double angleToVertical, double maxDistanceStitches, double minPoleHeight);
-    void segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter);
     void preProcessor(double meanKNoise, double stdDevNoise, double distThreshold);
-    void segmenterDON(double minPts, double maxPts, double xyBoundThreshold, double scaleSmall, double scaleLarge, double thresholdDON);
+    void segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter);
+    void segmenterDON(double minPts, double maxPts, double scaleSmall, double scaleLarge, double thresholdDON);
+    void treeExtractor(double maxDistanceTrees);
+    void clusterStitcher(double angleToVertical, double maxDistanceStitches);
+    void poleDetector(double minPoleHeight, double xyBoundThreshold);
     void algorithmSingleCut(string pathToPCDFile, double xyBoundThreshold, double maxDistanceStitches, double minPoleHeight, double scaleSmall);
 
 private:
@@ -108,17 +113,20 @@ private:
 	void euclideanClusterExtractor(vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
 	void euclideanClusterExtractor(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
 	void clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDiameter);
+	void clusterCloudBuilder(vector<pcl::PointIndices> const &clusterIndices);
 	void DONBuilder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double scaleSmall, double scaleLarge);
 	void DONThresholder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double thresholdDON);
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr inCloud;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud;
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr debugCloud;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr clusterCloud;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitchedCloud;
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr poleCloud;
 	pcl::PointCloud<pcl::PointNormal>::Ptr _donCloud;
 	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 	boost::random::mt19937 randomGen;
 	list<Cluster> filteredCluster;
+	list<Segment> stitchedClusters;
 	list<Segment> detectedPoles;
 	list<Segment> extractedTrees;
 };
