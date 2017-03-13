@@ -502,9 +502,9 @@ void PCLPoleDetector::clusterStitcher(double angleToVertical, double maxDistance
 				if (! it2->isProcessed()){
 					//pointCloudVisualizer(it2->getClusterCloud(), "cluster cloud " + boost::lexical_cast<string>(j));
 					//pointCloudVisualizer(*it2, "cluster shape " + boost::lexical_cast<string>(j));
-					//double heightDiff = it2->getZMin() - stitchCluster.getZMax();
+					double heightDiff = it2->getZMin() - stitchCluster.getZMax();
 					//double heightDiff = it2->getCentroid()[2] - stitchCluster.getCentroid()[2];
-					double heightDiff = it2->getCentroid()[2] - stitchCluster.getZMax();
+					//double heightDiff = it2->getCentroid()[2] - stitchCluster.getZMax();
 					if (heightDiff < maxDistanceStitches && heightDiff > 0){
 						Eigen::Vector4f diffVec = it2->getCentroid() - stitchCluster.getCentroid();
 						//** Hardcoded value below for Euclidean distance threshold of clusters to be stitched
@@ -655,7 +655,7 @@ void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double xyBoundThr
 	// segmenterSingleCut(minPts, maxPts, distThresholdCluster, maxDiameter);
 
 	double thresholdDON = 0.25;
-	double scaleLarge = 1;
+	double scaleLarge = scaleSmall*10;
 	segmenterDON(minPts, maxPts, scaleSmall, scaleLarge, thresholdDON);
 
 
