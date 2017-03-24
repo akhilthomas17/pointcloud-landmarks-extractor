@@ -103,13 +103,16 @@ public:
     void clusterStitcher(double angleToVertical, double maxDistanceStitches);
     void poleDetector(double minPoleHeight, double xyBoundThreshold);
     void algorithmSingleCut(string pathToPCDFile, double xyBoundThreshold, double maxDistanceStitches, double minPoleHeight, double scaleSmall);
+    void readPCD(string pathToFile);
+    void statisticalOutlierRemover(double mean, double sigma);
+    void writePCD(string pathToFile);
 
 private:
-	void readPCD(string pathToFile);
+	
 	void readDON(string pathToFile);
-    void writePCD(string pathToFile);
+    
     void groundPlaneRemover(double distThreshold);
-    void statisticalOutlierRemover(double mean, double sigma);
+    
 	void euclideanClusterExtractor(vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
 	void euclideanClusterExtractor(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
 	void clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDiameter);
