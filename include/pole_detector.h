@@ -100,7 +100,8 @@ public:
     void readPCD(string pathToFile);
     void statisticalOutlierRemover(double mean, double sigma);
     void writePCD(string pathToFile);
-    void writeSegments();
+    void writePoles();
+    void writeTrees();
     void pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, string name);
     void pointCloudVisualizer(list<Cluster> const &clusterList, string id);
     void pointCloudVisualizer(Cluster &cluster, string id);
@@ -108,6 +109,7 @@ public:
     void segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter);
     void segmenterDON(double minPts, double maxPts, double scaleSmall, double scaleLarge, double thresholdDON);
     void treeExtractor(double maxDistanceTrees);
+    void treeExtractor(double minTreeHeight, double xyBoundMin, double xyBoundMax);
     void clusterStitcher(double angleToVertical, double maxDistanceStitches);
     void poleDetector(double minPoleHeight, double xyBoundThreshold);
     void algorithmSingleCut(string pathToPCDFile, double xyBoundThreshold, double maxDistanceStitches, double minPoleHeight, double scaleSmall);

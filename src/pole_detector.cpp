@@ -156,25 +156,41 @@ void PCLPoleDetector::readDON(string pathToFile){
 
 void PCLPoleDetector::writePCD(string pathToFile){
 	pcl::PCDWriter writer;
+	/*
 	writer.writeBinary("clusters.pcd", *clusterCloud);
 	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
   	std::cerr << "Saved " << clusterCloud->points.size() << " data points to clusters.pcd." << std::endl;
-  	//*
+  	
   	writer.writeBinary("poles.pcd", *poleCloud);
 	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
   	std::cerr << "Saved " << poleCloud->points.size() << " data points to poles.pcd." << std::endl;
-  	//*/
+  	
   	writer.writeBinary("stitches.pcd", *stitchedCloud);
 	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
   	std::cerr << "Saved " << stitchedCloud->points.size() << " data points to stitches.pcd." << std::endl;
+	//*/
+
+  	writer.writeBinary("poles.pcd", *poleCloud);
+	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
+  	std::cerr << "Saved " << poleCloud->points.size() << " data points to poles.pcd." << std::endl;
+
 
 }
 
-void PCLPoleDetector::writeSegments(){
+void PCLPoleDetector::writePoles(){
 	pcl::PCDWriter writer;
 	int i = 0;
 	for (std::list<Segment>::iterator it = detectedPoles.begin(); it != detectedPoles.end(); ++it){
 		writer.writeBinary("clusters/cluster" + boost::lexical_cast<std::string>(i) + ".pcd", *(it->getSegmentCloud()));
+		i += 1;
+	}
+}
+
+void PCLPoleDetector::writeTrees(){
+	pcl::PCDWriter writer;
+	int i = 0;
+	for (std::list<Segment>::iterator it = extractedTrees.begin(); it != extractedTrees.end(); ++it){
+		writer.writeBinary("trees/tree" + boost::lexical_cast<std::string>(i) + ".pcd", *(it->getSegmentCloud()));
 		i += 1;
 	}
 }
@@ -590,9 +606,49 @@ void PCLPoleDetector::poleDetector(double minPoleHeight, double xyBoundThreshold
 		}
 	}
 	cerr << "Number of detected pole like structures: " << detectedPoles.size() << endl;
-
-
 }
+
+
+void PCLPoleDetector::treeExtractor(double minTreeHeight, double xyBoundMin, double xyBoundMax){
+	boost::random::uniform_int_distribution<> dist(0, 255);
+	for (list<Segment>::iterator it = stitchedClusters.begin(); it != stitchedClusters.end(); ++it){
+		Segment candidateTree = *it;
+		if (candidateTree.getHeight() > minTreeHeight){
+			Eigen::Vector4f minVecX, maxVecX, minVecY, maxVecY;
+			pcl::PointXYZ minPtX, maxPtX, minPtY, maxPtY;
+			minPtY = minPtX = candidateTree.getMinPt();
+			maxPtY = maxPtX = candidateTree.getMaxPt();
+			minPtX.y = (minPtX.y + maxPtX.y)/2; 
+			maxPtX.y = minPtX.y;
+			PointXYZ2eigenV4f2D(minVecX, minPtX);
+	    	PointXYZ2eigenV4f2D(maxVecX, maxPtX);
+			minPtY.x = (minPtY.x + maxPtY.x)/2; 
+			maxPtY.x = minPtY.x;
+			PointXYZ2eigenV4f2D(minVecY, minPtY);
+	    	PointXYZ2eigenV4f2D(maxVecY, maxPtY);
+
+	    	double xyBound = max((maxVecX - minVecX).norm(), (maxVecY - minVecY).norm());
+	    	if (xyBound <= xyBoundMax && xyBound >= xyBoundMin){
+				extractedTrees.push_back(candidateTree);
+				//* Uncomment to plot single cloud
+				//** Making single color for each detected pole
+				uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
+				uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+				for (list<Cluster>::iterator it = candidateTree.getSegmentParts().begin(); it != candidateTree.getSegmentParts().end(); ++it){
+					for (size_t i = 0; i < it->getClusterCloud()->points.size(); ++i){
+						pcl::PointXYZRGB PtColored;
+	  					makeColoredPoint(PtColored, it->getClusterCloud()->points[i], rgb);
+	  					poleCloud->points.push_back(PtColored);
+					}
+				}
+				//*/
+			}
+		}
+	}
+	cerr << "Number of detected tree like structures: " << extractedTrees.size() << endl;
+}
+
+
 void PCLPoleDetector::treeExtractor(double maxDistanceTrees){
 	boost::random::uniform_int_distribution<> dist(0, 255);
 	list<Segment>::iterator it, it2;
@@ -694,8 +750,9 @@ void PCLPoleDetector::buildRefClusters(string pathToPCDFile, double maxDistanceS
 	double angleToVertical = 0.35;
 	clusterStitcher(angleToVertical, maxDistanceStitches);
 	double minPoleHeight = 3;
-	double xyBoundThreshold = 2.5;
-	poleDetector(minPoleHeight, xyBoundThreshold);
+	double xyBoundMin = 3;
+	double xyBoundMax = 10;
+	treeExtractor(minPoleHeight, xyBoundMin, xyBoundMax);
 
-	writeSegments();
+	writeTrees();
 }

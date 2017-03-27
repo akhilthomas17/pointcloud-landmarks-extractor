@@ -19,3 +19,17 @@ add_executable(pole_detector
 
 target_link_libraries(pole_detector 
 	${PCL_LIBRARIES})
+
+find_package(HDF5)
+if(HDF5_FOUND)
+
+  find_package(FLANN)
+  include_directories(${FLANN_INCLUDE_DIRS})
+
+  include_directories(${HDF5_INCLUDE_DIR})
+
+  add_executable(build_tree src/build_tree.cpp)
+  target_link_libraries(build_tree ${PCL_LIBRARIES} ${Boost_LIBRARIES}
+                                 ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY})
+
+endif(HDF5_FOUND)
