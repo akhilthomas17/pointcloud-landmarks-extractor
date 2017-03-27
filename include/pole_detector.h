@@ -5,6 +5,7 @@
 #include <iostream>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
+#include <boost/lexical_cast.hpp> 
 
 using namespace std;
 
@@ -76,6 +77,8 @@ public:
 	list<Cluster>& getSegmentParts(){return segmentParts;}
 	Eigen::Vector4f getCentroid(){return centroid;}
 	Eigen::Vector4f getBase(){return base;}
+	pcl::PointCloud<pcl::PointXYZ>::Ptr getSegmentCloud(){return segmentCloud;}
+	
 
 private:
 	list<Cluster> segmentParts;
@@ -84,6 +87,7 @@ private:
 	pcl::PointXYZ minPt;
 	pcl::PointXYZ maxPt;
 	Eigen::Vector4f base;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr segmentCloud;
 	
 };
 
@@ -93,6 +97,10 @@ class PCLPoleDetector
 public:
     PCLPoleDetector();
     ~PCLPoleDetector();
+    void readPCD(string pathToFile);
+    void statisticalOutlierRemover(double mean, double sigma);
+    void writePCD(string pathToFile);
+    void writeSegments();
     void pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, string name);
     void pointCloudVisualizer(list<Cluster> const &clusterList, string id);
     void pointCloudVisualizer(Cluster &cluster, string id);
@@ -103,16 +111,12 @@ public:
     void clusterStitcher(double angleToVertical, double maxDistanceStitches);
     void poleDetector(double minPoleHeight, double xyBoundThreshold);
     void algorithmSingleCut(string pathToPCDFile, double xyBoundThreshold, double maxDistanceStitches, double minPoleHeight, double scaleSmall);
-    void readPCD(string pathToFile);
-    void statisticalOutlierRemover(double mean, double sigma);
-    void writePCD(string pathToFile);
+    void buildRefClusters(string pathToPCDFile, double maxDistanceStitches, double scaleSmall);
 
 private:
 	
 	void readDON(string pathToFile);
-    
     void groundPlaneRemover(double distThreshold);
-    
 	void euclideanClusterExtractor(vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
 	void euclideanClusterExtractor(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
 	void clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDiameter);
