@@ -85,10 +85,11 @@ void Segment::mergeSegment(Segment& segment){
 PCLPoleDetector::PCLPoleDetector(){
 	inCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
 	processCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
-	clusterCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
-	stitchedCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
-	poleCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
 	_donCloud = pcl::PointCloud<pcl::PointNormal>::Ptr (new pcl::PointCloud<pcl::PointNormal>);
+	stitchedCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+	poleLikeCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+	poleCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
+	treeCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
 	/* Uncomment to enable visualization
 	viewer = boost::shared_ptr<pcl::visualization::PCLVisualizer> (new pcl::visualization::PCLVisualizer ("Pole Detector"));
 	viewer->setBackgroundColor (0, 0, 0);
@@ -98,9 +99,11 @@ PCLPoleDetector::PCLPoleDetector(){
 
 
 PCLPoleDetector::~PCLPoleDetector(){
-	filteredCluster.clear();
+	rawClusters.clear();
+	stitchedClusters.clear();
+	poleLikeClusters.clear();
 	detectedPoles.clear();
-	extractedTrees.clear();
+	detectedTrees.clear();
 }
 
 
@@ -156,24 +159,27 @@ void PCLPoleDetector::readDON(string pathToFile){
 
 void PCLPoleDetector::writePCD(string pathToFile){
 	pcl::PCDWriter writer;
-	/*
-	writer.writeBinary("clusters.pcd", *clusterCloud);
-	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
-  	std::cerr << "Saved " << clusterCloud->points.size() << " data points to clusters.pcd." << std::endl;
-  	
-  	writer.writeBinary("poles.pcd", *poleCloud);
-	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
-  	std::cerr << "Saved " << poleCloud->points.size() << " data points to poles.pcd." << std::endl;
-  	
-  	writer.writeBinary("stitches.pcd", *stitchedCloud);
-	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
+	//*
+	writer.writeBinary("stitches.pcd", *stitchedCloud);
   	std::cerr << "Saved " << stitchedCloud->points.size() << " data points to stitches.pcd." << std::endl;
+  	
+  	writer.writeBinary("pole-like.pcd", *poleLikeCloud);
+  	std::cerr << "Saved " << poleLikeCloud->points.size() << " data points to pole-like.pcd." << std::endl;
+
+
+  	writer.writeBinary("poles.pcd", *poleCloud);
+  	std::cerr << "Saved " << poleCloud->points.size() << " data points to poles.pcd." << std::endl;
+
+  	writer.writeBinary("trees.pcd", *treeCloud);
+  	std::cerr << "Saved " << treeCloud->points.size() << " data points to trees.pcd." << std::endl;
+  	
 	//*/
 
+	/*
   	writer.writeBinary("poles.pcd", *poleCloud);
 	// pcl::io::savePCDFileASCII (pathToFile, *processCloud);
   	std::cerr << "Saved " << poleCloud->points.size() << " data points to poles.pcd." << std::endl;
-
+	*/
 
 }
 
@@ -189,7 +195,7 @@ void PCLPoleDetector::writePoles(){
 void PCLPoleDetector::writeTrees(){
 	pcl::PCDWriter writer;
 	int i = 0;
-	for (std::list<Segment>::iterator it = extractedTrees.begin(); it != extractedTrees.end(); ++it){
+	for (std::list<Segment>::iterator it = detectedTrees.begin(); it != detectedTrees.end(); ++it){
 		writer.writeBinary("trees/tree" + boost::lexical_cast<std::string>(i) + ".pcd", *(it->getSegmentCloud()));
 		i += 1;
 	}
@@ -413,9 +419,9 @@ void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndi
     		pcl::compute3DCentroid(*cloud_cluster, vecCentroid);
     		//cerr << "Radius of cluster " << j << ": " << radius << endl;
     		//Cluster cluster(vecCentroid, radius);
-    		filteredCluster.push_back(Cluster(vecCentroid, clusterDiameter/2, minPt, maxPt, cloud_cluster));
+    		rawClusters.push_back(Cluster(vecCentroid, clusterDiameter/2, minPt, maxPt, cloud_cluster));
 
-    		//* Uncomment to save the un-stitched clusters
+    		/* Uncomment to save the un-stitched clusters
     		//** Making color for each cluster
 	    	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen); 
 			uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
@@ -452,7 +458,7 @@ void PCLPoleDetector::clusterCloudBuilder(vector<pcl::PointIndices> const &clust
 
     	Eigen::Vector4f vecCentroid;
     	pcl::compute3DCentroid(*cloud_cluster, vecCentroid);
-		filteredCluster.push_back(Cluster(vecCentroid, xyDiameter/2, minPt, maxPt, cloud_cluster));
+		rawClusters.push_back(Cluster(vecCentroid, xyDiameter/2, minPt, maxPt, cloud_cluster));
 
 		/* Uncomment to save the un-stitched clusters
 		//** Making color for each cluster
@@ -483,7 +489,7 @@ void PCLPoleDetector::segmenterDON(double minPts, double maxPts, double scaleSma
   	euclideanClusterExtractor(donCloud, clusterIndices, minPts, maxPts, scaleSmall);
 
 	clusterCloudBuilder(clusterIndices);
-	cerr << "Number of clusters found: " << filteredCluster.size() << endl;
+	cerr << "Number of clusters found: " << rawClusters.size() << endl;
 }
 
 void PCLPoleDetector::segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter){
@@ -495,17 +501,17 @@ void PCLPoleDetector::segmenterSingleCut(double minPts, double maxPts, double cl
 
 	//For post-filtering. To remove very large unprobable clusters
 	clusterFilter(clusterIndices, maxDiameter);
-	cerr << "Number of clusters after filtering: " << filteredCluster.size() << endl;
+	cerr << "Number of clusters after filtering: " << rawClusters.size() << endl;
 }
 
 
 void PCLPoleDetector::clusterStitcher(double angleToVertical, double maxDistanceStitches){
 	boost::random::uniform_int_distribution<> dist(0, 255);
-	filteredCluster.sort(compareClusterHeight);
+	rawClusters.sort(compareClusterHeight);
 
 	/* To check the input clusters
 	int j = 0;
-	for (list<Cluster>::iterator it = filteredCluster.begin(); it != filteredCluster.end(); ++it){
+	for (list<Cluster>::iterator it = rawClusters.begin(); it != rawClusters.end(); ++it){
 		Cluster cluster = *it;
 		cerr << "Radius: " << cluster.getRadius() << endl;
 		cerr << "Z min: " << cluster.getZMin() << endl;
@@ -518,14 +524,14 @@ void PCLPoleDetector::clusterStitcher(double angleToVertical, double maxDistance
 	*/
 
 	int numClusters = 0;
-	for (list<Cluster>::iterator it = filteredCluster.begin(); it != filteredCluster.end(); ++it){
+	for (list<Cluster>::iterator it = rawClusters.begin(); it != rawClusters.end(); ++it){
 		if (! it->isProcessed()){
 			it->markProcessed();
 			Segment stitchCluster;
 			stitchCluster.addCluster(*it);
 			//pointCloudVisualizer(it->getClusterCloud(), "cluster cloud " + boost::lexical_cast<string>(j));
 			//pointCloudVisualizer(*it, "cluster shape " + boost::lexical_cast<string>(j));
-			for (list<Cluster>::iterator it2 = filteredCluster.begin(); it2 != filteredCluster.end(); ++it2){
+			for (list<Cluster>::iterator it2 = rawClusters.begin(); it2 != rawClusters.end(); ++it2){
 				if (! it2->isProcessed()){
 					//pointCloudVisualizer(it2->getClusterCloud(), "cluster cloud " + boost::lexical_cast<string>(j));
 					//pointCloudVisualizer(*it2, "cluster shape " + boost::lexical_cast<string>(j));
@@ -552,7 +558,7 @@ void PCLPoleDetector::clusterStitcher(double angleToVertical, double maxDistance
 				}
 			}
 			stitchedClusters.push_back(stitchCluster);
-			/* Uncomment to plot stitched cloud
+			//* Uncomment to plot stitched cloud
 			//** Making single color for each stitched cluster
 			uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
 			uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
@@ -629,8 +635,8 @@ void PCLPoleDetector::treeExtractor(double minTreeHeight, double xyBoundMin, dou
 
 	    	double xyBound = max((maxVecX - minVecX).norm(), (maxVecY - minVecY).norm());
 	    	if (xyBound <= xyBoundMax && xyBound >= xyBoundMin){
-				extractedTrees.push_back(candidateTree);
-				//* Uncomment to plot single cloud
+				detectedTrees.push_back(candidateTree);
+				/* Uncomment to plot single cloud
 				//** Making single color for each detected pole
 				uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
 				uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
@@ -645,7 +651,7 @@ void PCLPoleDetector::treeExtractor(double minTreeHeight, double xyBoundMin, dou
 			}
 		}
 	}
-	cerr << "Number of detected tree like structures: " << extractedTrees.size() << endl;
+	cerr << "Number of detected tree like structures: " << detectedTrees.size() << endl;
 }
 
 
@@ -670,8 +676,8 @@ void PCLPoleDetector::treeExtractor(double maxDistanceTrees){
 				++it2;
 		}
 		if (tree){
-			extractedTrees.push_back(candidateTree);
-			//* Uncomment to plot trees
+			detectedTrees.push_back(candidateTree);
+			/* Uncomment to plot trees
 			//** Making single color for each detected pole
 			uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
 			uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
@@ -686,7 +692,7 @@ void PCLPoleDetector::treeExtractor(double maxDistanceTrees){
 			it = detectedPoles.erase(it);
 		}
 		else{
-			//* Uncomment to plot poles
+			/* Uncomment to plot poles
 			//** Making single color for each detected pole
 			uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
 			uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
@@ -703,9 +709,47 @@ void PCLPoleDetector::treeExtractor(double maxDistanceTrees){
 		}
 	}
 	cerr << "Number of detected Poles: " << detectedPoles.size() << endl;
-	cerr << "Number of detected Trees: " << extractedTrees.size() << endl;
+	cerr << "Number of detected Trees: " << detectedTrees.size() << endl;
 }
 
+void PCLPoleDetector::clusterFilter(double minHeight, double xyBoundThreshold){
+	boost::random::uniform_int_distribution<> dist(0, 255);
+	for (list<Segment>::iterator it = stitchedClusters.begin(); it != stitchedClusters.end(); ++it){
+		Segment candidatePole = *it;
+		if (candidatePole.getHeight() > minHeight){
+			Eigen::Vector4f minVecX, maxVecX, minVecY, maxVecY;
+			pcl::PointXYZ minPtX, maxPtX, minPtY, maxPtY;
+			minPtY = minPtX = candidatePole.getMinPt();
+			maxPtY = maxPtX = candidatePole.getMaxPt();
+			minPtX.y = (minPtX.y + maxPtX.y)/2; 
+			maxPtX.y = minPtX.y;
+			PointXYZ2eigenV4f2D(minVecX, minPtX);
+	    	PointXYZ2eigenV4f2D(maxVecX, maxPtX);
+			minPtY.x = (minPtY.x + maxPtY.x)/2; 
+			maxPtY.x = minPtY.x;
+			PointXYZ2eigenV4f2D(minVecY, minPtY);
+	    	PointXYZ2eigenV4f2D(maxVecY, maxPtY);
+
+	    	double xyBound = max((maxVecX - minVecX).norm(), (maxVecY - minVecY).norm());
+	    	if (xyBound <= xyBoundThreshold){
+				poleLikeClusters.push_back(candidatePole);
+				//* Uncomment to plot single cloud
+				//** Making single color for each detected pole
+				uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
+				uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+				for (list<Cluster>::iterator it2 = candidatePole.getSegmentParts().begin(); it2 != candidatePole.getSegmentParts().end(); ++it2){
+					for (size_t i = 0; i < it2->getClusterCloud()->points.size(); ++i){
+						pcl::PointXYZRGB PtColored;
+	  					makeColoredPoint(PtColored, it2->getClusterCloud()->points[i], rgb);
+	  					poleLikeCloud->points.push_back(PtColored);
+					}
+				}
+				//*/
+			}
+		}
+	}
+	cerr << "Number of detected pole-like structures: " << poleLikeClusters.size() << endl;
+}
 
 void PCLPoleDetector::algorithmSingleCut(string pathToPCDFile, double xyBoundThreshold, double maxDistanceStitches, double minPoleHeight, double scaleSmall){
 	//readPCD(pathToPCDFile);
@@ -755,4 +799,139 @@ void PCLPoleDetector::buildRefClusters(string pathToPCDFile, double maxDistanceS
 	treeExtractor(minPoleHeight, xyBoundMin, xyBoundMax);
 
 	writeTrees();
+}
+
+void PCLPoleDetector::loadEsfData(vector<string>& labelList, string name_file){
+    // Reading labels from training file
+  	ifstream fs;
+  	fs.open (name_file.c_str ());
+	string line;
+	while (!fs.eof ()){
+		getline (fs, line);
+		if (line.empty ())
+		  continue;
+		labelList.push_back(line);
+	}
+	fs.close ();
+	//cerr << "ESF data loaded, size of data: " << labelList.size() << endl;
+}
+
+bool PCLPoleDetector::isPole(flann::Matrix<int> const& k_indices, vector<string> const& labelList){
+	string label_nn = labelList.at(k_indices[0][0]);
+	if (label_nn.find("Tree") != -1){
+		return(false);
+	}
+	return (true);
+}
+
+void PCLPoleDetector::esfMatcher(flann::Index<flann::ChiSquareDistance<float> > const &kdTree, vector<string> const &labelList, double kdTreeThreshold){
+	boost::random::uniform_int_distribution<> dist(0, 255);
+	for (list<Segment>::iterator it = poleLikeClusters.begin(); it != poleLikeClusters.end(); ++it){
+		Segment candidate = *it;
+		// Estimating esf for the cluster	
+		pcl::PointCloud<pcl::ESFSignature640>::Ptr descriptor(new pcl::PointCloud<pcl::ESFSignature640>);
+		pcl::ESFEstimation<pcl::PointXYZ, pcl::ESFSignature640> esf_est;
+		esf_est.setInputCloud(candidate.getSegmentCloud());
+		esf_est.compute(*descriptor);
+
+		// Making esf histogram FLANN compatible
+		vector<float> histogram;
+		histogram.resize(640);
+		vector <pcl::PCLPointField> fields;
+		int esf_idx;
+		esf_idx = pcl::getFieldIndex (*descriptor, "esf", fields);
+		for (size_t i = 0; i < fields[esf_idx].count; ++i){
+			histogram[i] = descriptor->points[0].histogram[i];
+		}
+		flann::Matrix<float> pt_esf = flann::Matrix<float>(new float[histogram.size ()], 1, histogram.size ());
+  		memcpy (&pt_esf.ptr ()[0], &histogram[0], pt_esf.cols * pt_esf.rows * sizeof (float));
+  		histogram.clear();
+
+  		// Calculating k nearest neighbours (k = 5)
+  		int k = 5;
+  		flann::Matrix<int> k_indices = flann::Matrix<int>(new int[k], 1, k);
+  		flann::Matrix<float> k_distances = flann::Matrix<float>(new float[k], 1, k);
+  		kdTree.knnSearch (pt_esf, k_indices, k_distances, k, flann::SearchParams (512));
+  		delete[] pt_esf.ptr ();
+
+  		// Checking if the mean distance is less than threshold
+  		double meanDist = k_distances[0][0];
+  		if( meanDist < kdTreeThreshold){
+  			// Check if the cluster is pole. Else, it is detected as a tree
+  			if(isPole(k_indices, labelList)){
+  				detectedPoles.push_back(candidate);
+  				//* Uncomment to plot single cloud
+				//** Making single color for each detected pole
+				uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
+				uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+				for (list<Cluster>::iterator it2 = candidate.getSegmentParts().begin(); it2 != candidate.getSegmentParts().end(); ++it2){
+					for (size_t i = 0; i < it2->getClusterCloud()->points.size(); ++i){
+						pcl::PointXYZRGB PtColored;
+	  					makeColoredPoint(PtColored, it2->getClusterCloud()->points[i], rgb);
+	  					poleCloud->points.push_back(PtColored);
+					}
+				}
+				//*/
+  			}else {
+  				detectedTrees.push_back(candidate);
+  				//* Uncomment to plot single cloud
+				//** Making single color for each detected pole
+				uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
+				uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+				for (list<Cluster>::iterator it2 = candidate.getSegmentParts().begin(); it2 != candidate.getSegmentParts().end(); ++it2){
+					for (size_t i = 0; i < it2->getClusterCloud()->points.size(); ++i){
+						pcl::PointXYZRGB PtColored;
+	  					makeColoredPoint(PtColored, it2->getClusterCloud()->points[i], rgb);
+	  					treeCloud->points.push_back(PtColored);
+					}
+				}
+				//*/
+  			}
+  		}
+	}
+	cerr << "Number of detected Poles: " << detectedPoles.size() << endl;
+	cerr << "Number of detected Trees: " << detectedTrees.size() << endl;
+
+}
+
+void PCLPoleDetector::algorithmEsfBased(string pathToPCDFile, string pathToDataFolder, double donScaleSmall, double kdTreeThreshold){
+	/// Reading Input cloud
+	readDON(pathToPCDFile);
+
+	/// DON thresholding followed by Euclidean clustering. ScaleSmall here is the Cluster Threshold
+	double maxPts = 50000;
+	double minPts = 15;
+	double thresholdDON = 0.25;
+	double scaleLarge = donScaleSmall*10;
+	segmenterDON(minPts, maxPts, donScaleSmall, scaleLarge, thresholdDON);
+
+	/// Cluster Stitching
+	double angleToVertical = 0.35;
+	double maxDistanceStitches = 1.5;
+	clusterStitcher(angleToVertical, maxDistanceStitches);
+	rawClusters.clear();
+
+	/// Cluster filters based on "minimum height" and "maximum xy-bound"
+	double minHeight = 3; 
+	double xyBoundThreshold = 10;
+	clusterFilter(minHeight, xyBoundThreshold);
+	stitchedClusters.clear();
+
+	/// Loading ESF training data
+	string kdtree_file = pathToDataFolder + "kdtree.idx";
+	string training_data_h5_file = pathToDataFolder + "training_data.h5";
+	string training_data_name_file = pathToDataFolder + "training_data.list";
+	vector<string> labelList;
+	loadEsfData(labelList, training_data_name_file);
+	// Reading Kd Tree from training file
+	flann::Matrix<float> data;
+	flann::load_from_file (data, training_data_h5_file, "training_data");
+	flann::Index<flann::ChiSquareDistance<float> > kdTree (data, flann::SavedIndexParams (kdtree_file));
+    kdTree.buildIndex ();
+
+    /// Finding ESF for each of the clusters, followed by matching with training data
+    esfMatcher(kdTree, labelList, kdTreeThreshold);
+
+
+	writePCD("output.pcd");
 }

@@ -5,7 +5,10 @@
 #include <iostream>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
-#include <boost/lexical_cast.hpp> 
+#include <boost/lexical_cast.hpp>
+#include <flann/io/hdf5.h>
+#include <flann/flann.h>
+
 
 using namespace std;
 
@@ -32,6 +35,7 @@ using namespace std;
 #include <pcl/search/kdtree.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/don.h>
+#include <pcl/features/esf.h>
 
 
 
@@ -111,9 +115,14 @@ public:
     void treeExtractor(double maxDistanceTrees);
     void treeExtractor(double minTreeHeight, double xyBoundMin, double xyBoundMax);
     void clusterStitcher(double angleToVertical, double maxDistanceStitches);
+    void clusterFilter(double minHeight, double xyBoundThreshold);
     void poleDetector(double minPoleHeight, double xyBoundThreshold);
     void algorithmSingleCut(string pathToPCDFile, double xyBoundThreshold, double maxDistanceStitches, double minPoleHeight, double scaleSmall);
     void buildRefClusters(string pathToPCDFile, double maxDistanceStitches, double scaleSmall);
+    void loadEsfData(vector<string> &labelList, string name_file);
+ 	bool isPole(flann::Matrix<int> const& k_indices, vector<string> const& labelList);
+    void esfMatcher(flann::Index<flann::ChiSquareDistance<float> > const& kdTree, vector<string> const& labelList, double kdTreeThreshold);
+    void algorithmEsfBased(string pathToPCDFile, string pathToDataFolder, double donScaleSmall, double kdTreeThreshold);
 
 private:
 	
@@ -128,16 +137,18 @@ private:
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr inCloud;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud;
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr clusterCloud;
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitchedCloud;
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr poleCloud;
 	pcl::PointCloud<pcl::PointNormal>::Ptr _donCloud;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr stitchedCloud;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr poleLikeCloud;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr poleCloud;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr treeCloud;
 	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 	boost::random::mt19937 randomGen;
-	list<Cluster> filteredCluster;
+	list<Cluster> rawClusters;
 	list<Segment> stitchedClusters;
+	list<Segment> poleLikeClusters;
 	list<Segment> detectedPoles;
-	list<Segment> extractedTrees;
+	list<Segment> detectedTrees;
 };
 
 #endif

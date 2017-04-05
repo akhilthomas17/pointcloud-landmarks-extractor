@@ -2,10 +2,12 @@
 int main(int argc, char const *argv[])
 {
 	if ( argc != 4 ) // argc should be 4 for correct execution
-		cout<<"usage: "<< argv[0] <<" <path to pcd file> <maxDistanceStitches> <DON small scale> \n";
+		cout<<"usage: "<< argv[0] <<" <path to pcd file> <DON small scale> <kdTree Threshold> \n";
 	else {
 		PCLPoleDetector* poleDetector = new PCLPoleDetector;
-		poleDetector->buildRefClusters(argv[1], atof(argv[2]), atof(argv[3]));
+		//string pathToPcd = "../results/don-optimization/no-filter/raw-don/don_0-5+5.pcd";
+		string pathToDataFolder = "../data/esf_training/";
+		poleDetector->algorithmEsfBased(argv[1], pathToDataFolder, atof(argv[2]), atof(argv[3]));
 	}
 
 	return 0;
