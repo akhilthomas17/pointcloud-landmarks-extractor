@@ -181,7 +181,7 @@ void PCLPoleDetector::writePoles(){
 	pcl::PCDWriter writer;
 	int i = 0;
 	for (std::list<Segment>::iterator it = detectedPoles.begin(); it != detectedPoles.end(); ++it){
-		writer.writeBinary("clusters/cluster" + boost::lexical_cast<std::string>(i) + ".pcd", *(it->getSegmentCloud()));
+		writer.writeBinary("poles/pole" + boost::lexical_cast<std::string>(i) + ".pcd", *(it->getSegmentCloud()));
 		i += 1;
 	}
 }
@@ -590,7 +590,7 @@ void PCLPoleDetector::poleDetector(double minPoleHeight, double xyBoundThreshold
 	    	double xyBound = max((maxVecX - minVecX).norm(), (maxVecY - minVecY).norm());
 	    	if (xyBound <= xyBoundThreshold){
 				detectedPoles.push_back(candidatePole);
-				/* Uncomment to plot single cloud
+				//* Uncomment to plot single cloud
 				//** Making single color for each detected pole
 				uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
 				uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
@@ -749,11 +749,13 @@ void PCLPoleDetector::buildRefClusters(string pathToPCDFile, double maxDistanceS
 	segmenterDON(minPts, maxPts, scaleSmall, scaleLarge, thresholdDON);
 	double angleToVertical = 0.35;
 	clusterStitcher(angleToVertical, maxDistanceStitches);
-	double minPoleHeight = 2;
+	double minPoleHeight = 3;
 	double xyBoundMin = 2;
 	double xyBoundMax = 20;
-	treeExtractor(minPoleHeight, xyBoundMin, xyBoundMax);
+	double xyBoundThreshold = 2;
+	//treeExtractor(minPoleHeight, xyBoundMin, xyBoundMax);
+	poleDetector(minPoleHeight, xyBoundThreshold);
 
-	writeTrees();
-	writePCD("trees.pcd");
+	writePoles();
+	writePCD("poles.pcd");
 }
