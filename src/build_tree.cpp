@@ -9,6 +9,7 @@
 #include <flann/io/hdf5.h>
 #include <fstream>
 
+
 typedef std::pair<std::string, std::vector<float> > esf_model;
 
 /** \brief Loads an n-D histogram file as a ESF signature
@@ -54,7 +55,7 @@ loadHist (const boost::filesystem::path &path, esf_model &esf)
   * \param models the resultant vector of histogram models
   */
 void
-loadFeatureModels (const boost::filesystem::path &base_dir, const std::string &extension, 
+loadFeatureModels (const boost::filesystem::path &base_dir, const std::string &extension,
                    std::vector<esf_model> &models)
 {
   if (!boost::filesystem::exists (base_dir) && !boost::filesystem::is_directory (base_dir))
@@ -90,15 +91,15 @@ main (int argc, char** argv)
   std::string extension (".pcd");
   transform (extension.begin (), extension.end (), extension.begin (), (int(*)(int))tolower);
 
-  std::string kdtree_idx_file_name = "kdtree.idx";
-  std::string training_data_h5_file_name = "training_data.h5";
-  std::string training_data_list_file_name = "training_data.list";
+  std::string kdtree_idx_file_name = std::string(argv[1]) + "kdtree.idx";
+  std::string training_data_h5_file_name = std::string(argv[1]) + "training_data.h5";
+  std::string training_data_list_file_name = std::string(argv[1]) + "training_data.list";
 
   std::vector<esf_model> models;
 
   // Load the model histograms
   loadFeatureModels (argv[1], extension, models);
-  pcl::console::print_highlight ("Loaded %d VFH models. Creating training data %s/%s.\n", 
+  pcl::console::print_highlight ("Loaded %d VFH models. Creating training data %s/%s.\n",
       (int)models.size (), training_data_h5_file_name.c_str (), training_data_list_file_name.c_str ());
 
   // Convert data into FLANN format
@@ -115,11 +116,11 @@ main (int argc, char** argv)
   for (size_t i = 0; i < models.size (); ++i)
     fs << models[i].first << "\n";
   fs.close ();
- 
+
   // Build the tree index and save it to disk
   pcl::console::print_error ("Building the kdtree index (%s) for %d elements...\n", kdtree_idx_file_name.c_str (), (int)data.rows);
-  //flann::Index<flann::ChiSquareDistance<float> > index (data, flann::LinearIndexParams ());
-  flann::Index<flann::ChiSquareDistance<float> > index (data, flann::KDTreeIndexParams (4));
+  flann::Index<flann::ChiSquareDistance<float> > index (data, flann::LinearIndexParams ());
+  //flann::Index<flann::ChiSquareDistance<float> > index (data, flann::KDTreeIndexParams (4));
   index.buildIndex ();
   index.save (kdtree_idx_file_name);
   delete[] data.ptr ();
