@@ -22,12 +22,15 @@ if(HDF5_FOUND)
   include_directories(${HDF5_INCLUDE_DIR})
   add_executable(pole_detector
     src/pole_detector.cpp
-	src/main.cpp)
+	src/main.cpp
+	src/FeatureDescriptor.cpp)
 
   target_link_libraries(pole_detector ${PCL_LIBRARIES} ${Boost_LIBRARIES}
                                  ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY})
 
-  add_executable(build_tree src/build_tree.cpp)
+  add_executable(build_tree
+    src/build_tree.cpp
+    src/FeatureDescriptor.cpp)
   target_link_libraries(build_tree ${PCL_LIBRARIES} ${Boost_LIBRARIES}
                                  ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY})
 
