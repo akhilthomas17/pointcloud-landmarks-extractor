@@ -1,87 +1,5 @@
 #include <pole_detector.h>
 
-// ** Helper functions!!!
-
-bool compareClusterHeight(Cluster& first, Cluster& second){
-	return (first.getCentroid()[2] < second.getCentroid()[2]);
-}
-
-void makeColoredPoint(pcl::PointXYZRGB & PtColored, pcl::PointXYZ const & Pt, uint32_t rgb){
-	PtColored.x = Pt.x;
-	PtColored.y = Pt.y;
-	PtColored.z = Pt.z;
-	PtColored.rgb = *reinterpret_cast<float*>(&rgb);
-}
-
-void eigenV4f2PointXYZ(Eigen::Vector4f const &vec, pcl::PointXYZ &point){
-	point.x = vec[0];
-	point.y = vec[1];
-	point.z = vec[2];
-}
-
-void PointXYZ2eigenV4f2D(Eigen::Vector4f &vec, pcl::PointXYZ const &point){
-	vec[0] = point.x;
-	vec[1] = point.y;
-	vec[2] = 1; // In order to check only x-y distance
-	vec[3] = 0; // Check!!!!!!*************//////////********
-}
-
-// ** Class implementation begins!!!
-
-Cluster::Cluster(Eigen::Vector4f centroid_, double radius_, pcl::PointXYZ minPt_, pcl::PointXYZ maxPt_, pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud_):
-	centroid(centroid_), 
-	radius(radius_),
-	minPt(minPt_),
-	maxPt(maxPt_),
-	processed(false),
-	clusterCloud(clusterCloud_){}
-
-Cluster::Cluster(){
-	clusterCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
-}
-
-Segment::Segment(){
-	height = 0;
-}
-
-
-void Segment::addCluster(Cluster& cluster){
-	segmentParts.push_back(cluster);
-	int numClusters = segmentParts.size();
-	centroid = (centroid * (numClusters-1) + cluster.getCentroid())/(numClusters);
-	if (numClusters == 1){
-		minPt = cluster.getMinPt();
-		maxPt = cluster.getMaxPt();
-		segmentCloud = cluster.getClusterCloud();
-	}
-	else{
-		minPt.x = min(minPt.x, cluster.getMinPt().x);
-		maxPt.x = max(maxPt.x, cluster.getMaxPt().x);
-		minPt.y = min(minPt.y, cluster.getMinPt().y);
-		maxPt.y = max(maxPt.y, cluster.getMaxPt().y);
-		minPt.z = min(minPt.z, cluster.getMinPt().z);
-		maxPt.z = max(maxPt.z, cluster.getMaxPt().z);
-		*segmentCloud += *(cluster.getClusterCloud());
-	}
-	height = maxPt.z - minPt.z;
-}
-
-
-void Segment::mergeSegment(Segment& segment){
-	segmentParts.insert(segmentParts.end(), segment.getSegmentParts().begin(), segment.getSegmentParts().end());
-	double lenSelf = segmentParts.size();
-	double lenSegment = segment.getSegmentParts().size();
-	centroid = (segment.getCentroid() * lenSegment + centroid * lenSelf)/(lenSelf + lenSegment);
-	minPt.x = min(minPt.x, segment.getMinPt().x);
-	maxPt.x = max(maxPt.x, segment.getMaxPt().x);
-	minPt.y = min(minPt.y, segment.getMinPt().y);
-	maxPt.y = max(maxPt.y, segment.getMaxPt().y);
-	minPt.z = min(minPt.z, segment.getMinPt().z);
-	maxPt.z = max(maxPt.z, segment.getMaxPt().z);
-	height = maxPt.z - minPt.z;
-}
-
-
 PCLPoleDetector::PCLPoleDetector(){
 	inCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
 	processCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
@@ -162,7 +80,7 @@ void PCLPoleDetector::writePCD(string pathToFile){
 	//*
 	writer.writeBinary("stitches.pcd", *stitchedCloud);
   	std::cerr << "Saved " << stitchedCloud->points.size() << " data points to stitches.pcd." << std::endl;
-  	
+
   	writer.writeBinary("pole-like.pcd", *poleLikeCloud);
   	std::cerr << "Saved " << poleLikeCloud->points.size() << " data points to pole-like.pcd." << std::endl;
 
@@ -172,7 +90,7 @@ void PCLPoleDetector::writePCD(string pathToFile){
 
   	writer.writeBinary("trees.pcd", *treeCloud);
   	std::cerr << "Saved " << treeCloud->points.size() << " data points to trees.pcd." << std::endl;
-  	
+
 	//*/
 
 	/*
@@ -329,10 +247,10 @@ void PCLPoleDetector::DONBuilder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud
   	// Compute DoN
   	don.computeFeature (*donCloud);
 
-  	/* To write DON cloud to file, uncomment below 
+  	/* To write DON cloud to file, uncomment below
   	// Save DoN features
   	pcl::PCDWriter writer;
- 	writer.write<pcl::PointNormal> ("don.pcd", *donCloud, true); 
+ 	writer.write<pcl::PointNormal> ("don.pcd", *donCloud, true);
 	*/
 }
 
@@ -353,12 +271,12 @@ void PCLPoleDetector::DONThresholder(pcl::PointCloud<pcl::PointNormal>::Ptr donC
 	// Apply filter
 	condrem.filter (*donCloud);
 
-	
+
 	std::cout << "Filtered Pointcloud: " << donCloud->points.size () << " data points." << std::endl;
 	// Save filtered output
 	//*
 	pcl::PCDWriter writer;
-	writer.write<pcl::PointNormal> ("don_filtered.pcd", *donCloud, true); 
+	writer.write<pcl::PointNormal> ("don_filtered.pcd", *donCloud, true);
 	//*/
 
 }
@@ -423,9 +341,9 @@ void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndi
 
     		/* Uncomment to save the un-stitched clusters
     		//** Making color for each cluster
-	    	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen); 
+	    	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
 			uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
-			//** 
+			//**
     		for (size_t i = 0; i < cloud_cluster->points.size(); ++i){
     			pcl::PointXYZRGB PtColored;
       			makeColoredPoint(PtColored, cloud_cluster->points[i], rgb);
@@ -462,9 +380,9 @@ void PCLPoleDetector::clusterCloudBuilder(vector<pcl::PointIndices> const &clust
 
 		/* Uncomment to save the un-stitched clusters
 		//** Making color for each cluster
-    	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen); 
+    	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
 		uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
-		
+
 		for (size_t i = 0; i < cloud_cluster->points.size(); ++i){
 			pcl::PointXYZRGB PtColored;
   			makeColoredPoint(PtColored, cloud_cluster->points[i], rgb);
@@ -584,11 +502,11 @@ void PCLPoleDetector::poleDetector(double minPoleHeight, double xyBoundThreshold
 			pcl::PointXYZ minPtX, maxPtX, minPtY, maxPtY;
 			minPtY = minPtX = candidatePole.getMinPt();
 			maxPtY = maxPtX = candidatePole.getMaxPt();
-			minPtX.y = (minPtX.y + maxPtX.y)/2; 
+			minPtX.y = (minPtX.y + maxPtX.y)/2;
 			maxPtX.y = minPtX.y;
 			PointXYZ2eigenV4f2D(minVecX, minPtX);
 	    	PointXYZ2eigenV4f2D(maxVecX, maxPtX);
-			minPtY.x = (minPtY.x + maxPtY.x)/2; 
+			minPtY.x = (minPtY.x + maxPtY.x)/2;
 			maxPtY.x = minPtY.x;
 			PointXYZ2eigenV4f2D(minVecY, minPtY);
 	    	PointXYZ2eigenV4f2D(maxVecY, maxPtY);
@@ -624,11 +542,11 @@ void PCLPoleDetector::treeExtractor(double minTreeHeight, double xyBoundMin, dou
 			pcl::PointXYZ minPtX, maxPtX, minPtY, maxPtY;
 			minPtY = minPtX = candidateTree.getMinPt();
 			maxPtY = maxPtX = candidateTree.getMaxPt();
-			minPtX.y = (minPtX.y + maxPtX.y)/2; 
+			minPtX.y = (minPtX.y + maxPtX.y)/2;
 			maxPtX.y = minPtX.y;
 			PointXYZ2eigenV4f2D(minVecX, minPtX);
 	    	PointXYZ2eigenV4f2D(maxVecX, maxPtX);
-			minPtY.x = (minPtY.x + maxPtY.x)/2; 
+			minPtY.x = (minPtY.x + maxPtY.x)/2;
 			maxPtY.x = minPtY.x;
 			PointXYZ2eigenV4f2D(minVecY, minPtY);
 	    	PointXYZ2eigenV4f2D(maxVecY, maxPtY);
@@ -721,11 +639,11 @@ void PCLPoleDetector::clusterFilter(double minHeight, double xyBoundThreshold){
 			pcl::PointXYZ minPtX, maxPtX, minPtY, maxPtY;
 			minPtY = minPtX = candidatePole.getMinPt();
 			maxPtY = maxPtX = candidatePole.getMaxPt();
-			minPtX.y = (minPtX.y + maxPtX.y)/2; 
+			minPtX.y = (minPtX.y + maxPtX.y)/2;
 			maxPtX.y = minPtX.y;
 			PointXYZ2eigenV4f2D(minVecX, minPtX);
 	    	PointXYZ2eigenV4f2D(maxVecX, maxPtX);
-			minPtY.x = (minPtY.x + maxPtY.x)/2; 
+			minPtY.x = (minPtY.x + maxPtY.x)/2;
 			maxPtY.x = minPtY.x;
 			PointXYZ2eigenV4f2D(minVecY, minPtY);
 	    	PointXYZ2eigenV4f2D(maxVecY, maxPtY);
@@ -828,7 +746,7 @@ void PCLPoleDetector::esfMatcher(flann::Index<flann::ChiSquareDistance<float> > 
 	boost::random::uniform_int_distribution<> dist(0, 255);
 	for (list<Segment>::iterator it = poleLikeClusters.begin(); it != poleLikeClusters.end(); ++it){
 		Segment candidate = *it;
-		// Estimating esf for the cluster	
+		// Estimating esf for the cluster
 		pcl::PointCloud<pcl::ESFSignature640>::Ptr descriptor(new pcl::PointCloud<pcl::ESFSignature640>);
 		pcl::ESFEstimation<pcl::PointXYZ, pcl::ESFSignature640> esf_est;
 		esf_est.setInputCloud(candidate.getSegmentCloud());
@@ -912,7 +830,7 @@ void PCLPoleDetector::algorithmEsfBased(string pathToPCDFile, string pathToDataF
 	rawClusters.clear();
 
 	/// Cluster filters based on "minimum height" and "maximum xy-bound"
-	double minHeight = 3; 
+	double minHeight = 3;
 	double xyBoundThreshold = 10;
 	clusterFilter(minHeight, xyBoundThreshold);
 	stitchedClusters.clear();

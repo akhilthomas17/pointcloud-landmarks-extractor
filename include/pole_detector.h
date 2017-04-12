@@ -1,8 +1,10 @@
 #ifndef POLE_DETECTOR_H
 #define POLE_DETECTOR_H
 
+// Include required classes
+#include <FeatureDescriptor.h>
+
 // General include files:
-#include <iostream>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 #include <boost/lexical_cast.hpp>
@@ -10,18 +12,13 @@
 #include <flann/flann.h>
 
 
-using namespace std;
-
 // PCL specific include files:
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
 #include <pcl/filters/filter.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/conditional_removal.h>
 #include <pcl/io/pcd_io.h>
-#include <pcl/common/common.h>
 #include <pcl/common/distances.h>
 #include <pcl/common/centroid.h>
 #include <pcl/common/angles.h>
@@ -35,65 +32,6 @@ using namespace std;
 #include <pcl/search/kdtree.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/don.h>
-#include <pcl/features/esf.h>
-
-
-
-class Cluster
-{
-public:
-	Cluster(Eigen::Vector4f centroid_, double radius_, pcl::PointXYZ minPt_, pcl::PointXYZ maxPt_, pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud_);
-	Cluster();
-	~Cluster(){}
-	Eigen::Vector4f const& getCentroid(){return centroid;}
-	double const& getRadius(){return radius;}
-	double getZMin(){return minPt.z;}
-	double getZMax(){return maxPt.z;}
-	pcl::PointXYZ const& getMinPt(){return minPt;}
-	pcl::PointXYZ const& getMaxPt(){return maxPt;}
-	pcl::PointCloud<pcl::PointXYZ>::Ptr getClusterCloud(){return clusterCloud;}
-	bool const& isProcessed(){return processed;}
-	void markProcessed(){processed = true;}
-
-private:
-	Eigen::Vector4f centroid;
-	double radius;
-	pcl::PointXYZ minPt;
-	pcl::PointXYZ maxPt;
-	bool processed;
-	pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud;
-	
-};
-
-
-class Segment
-{
-public:
-	Segment();
-	~Segment(){segmentParts.clear();};
-	void mergeSegment(Segment& segment);
-	void addCluster(Cluster& cluster);
-	double getHeight(){return height;}
-	double getZMax(){return maxPt.z;}
-	double getZMin(){return minPt.z;}
-	pcl::PointXYZ const& getMinPt(){return minPt;}
-	pcl::PointXYZ const& getMaxPt(){return maxPt;}
-	list<Cluster>& getSegmentParts(){return segmentParts;}
-	Eigen::Vector4f getCentroid(){return centroid;}
-	Eigen::Vector4f getBase(){return base;}
-	pcl::PointCloud<pcl::PointXYZ>::Ptr getSegmentCloud(){return segmentCloud;}
-	
-
-private:
-	list<Cluster> segmentParts;
-	Eigen::Vector4f centroid;
-	double height;
-	pcl::PointXYZ minPt;
-	pcl::PointXYZ maxPt;
-	Eigen::Vector4f base;
-	pcl::PointCloud<pcl::PointXYZ>::Ptr segmentCloud;
-	
-};
 
 
 class PCLPoleDetector
@@ -125,7 +63,7 @@ public:
     void algorithmEsfBased(string pathToPCDFile, string pathToDataFolder, double donScaleSmall, double kdTreeThreshold);
 
 private:
-	
+
 	void readDON(string pathToFile);
     void groundPlaneRemover(double distThreshold);
 	void euclideanClusterExtractor(vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
