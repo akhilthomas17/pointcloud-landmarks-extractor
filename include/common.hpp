@@ -3,6 +3,7 @@
 
 // General include files:
 #include <iostream>
+#include <fstream>
 #include <list>
 
 using namespace std;
@@ -115,7 +116,7 @@ private:
 class Feature
 {
 public:
-    Feature();
+    Feature(){}
     ~Feature(){signatureAsVector.clear();}
     string name;
     vector<float> signatureAsVector;

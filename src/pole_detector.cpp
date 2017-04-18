@@ -744,29 +744,16 @@ bool PCLPoleDetector::isPole(flann::Matrix<int> const& k_indices, vector<string>
 
 void PCLPoleDetector::esfMatcher(flann::Index<flann::ChiSquareDistance<float> > const &kdTree, vector<string> const &labelList, double kdTreeThreshold){
 	boost::random::uniform_int_distribution<> dist(0, 255);
+	FeatureDescriptor descriptor;
 	for (list<Segment>::iterator it = poleLikeClusters.begin(); it != poleLikeClusters.end(); ++it){
 		Segment candidate = *it;
-		// Estimating esf for the cluster
-		pcl::PointCloud<pcl::ESFSignature640>::Ptr descriptor(new pcl::PointCloud<pcl::ESFSignature640>);
-		pcl::ESFEstimation<pcl::PointXYZ, pcl::ESFSignature640> esf_est;
-		esf_est.setInputCloud(candidate.getSegmentCloud());
-		esf_est.compute(*descriptor);
+		Feature esf;
+		descriptor.describeEsfFeature(candidate.getSegmentCloud(),&esf);
+		flann::Matrix<float> pt_esf = flann::Matrix<float>(new float[esf.signatureAsVector.size ()], 1, esf.signatureAsVector.size ());
+  		memcpy (&pt_esf.ptr ()[0], &esf.signatureAsVector[0], pt_esf.cols * pt_esf.rows * sizeof (float));
 
-		// Making esf histogram FLANN compatible
-		vector<float> histogram;
-		histogram.resize(640);
-		vector <pcl::PCLPointField> fields;
-		int esf_idx;
-		esf_idx = pcl::getFieldIndex (*descriptor, "esf", fields);
-		for (size_t i = 0; i < fields[esf_idx].count; ++i){
-			histogram[i] = descriptor->points[0].histogram[i];
-		}
-		flann::Matrix<float> pt_esf = flann::Matrix<float>(new float[histogram.size ()], 1, histogram.size ());
-  		memcpy (&pt_esf.ptr ()[0], &histogram[0], pt_esf.cols * pt_esf.rows * sizeof (float));
-  		histogram.clear();
-
-  		// Calculating k nearest neighbours (k = 5)
-  		int k = 5;
+  		// Calculating k nearest neighbours (k = 1)
+  		int k = 1;
   		flann::Matrix<int> k_indices = flann::Matrix<int>(new int[k], 1, k);
   		flann::Matrix<float> k_distances = flann::Matrix<float>(new float[k], 1, k);
   		kdTree.knnSearch (pt_esf, k_indices, k_distances, k, flann::SearchParams (512));
@@ -812,7 +799,8 @@ void PCLPoleDetector::esfMatcher(flann::Index<flann::ChiSquareDistance<float> > 
 
 }
 
-void PCLPoleDetector::algorithmEsfBased(string pathToPCDFile, string pathToDataFolder, double donScaleSmall, double kdTreeThreshold){
+void PCLPoleDetector::algorithmFeatureDescriptorBased(string pathToPCDFile, string pathToDataFolder,
+													  double donScaleSmall, double kdTreeThreshold){
 	/// Reading Input cloud
 	readDON(pathToPCDFile);
 

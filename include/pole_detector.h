@@ -60,7 +60,7 @@ public:
     void loadEsfData(vector<string> &labelList, string name_file);
  	bool isPole(flann::Matrix<int> const& k_indices, vector<string> const& labelList);
     void esfMatcher(flann::Index<flann::ChiSquareDistance<float> > const& kdTree, vector<string> const& labelList, double kdTreeThreshold);
-    void algorithmEsfBased(string pathToPCDFile, string pathToDataFolder, double donScaleSmall, double kdTreeThreshold);
+    void algorithmFeatureDescriptorBased(string pathToPCDFile, string pathToDataFolder, double donScaleSmall, double kdTreeThreshold);
 
 private:
 
