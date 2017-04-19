@@ -819,7 +819,7 @@ void PCLPoleDetector::algorithmFeatureDescriptorBased(string pathToPCDFile, stri
 
 	/// Cluster filters based on "minimum height" and "maximum xy-bound"
 	double minHeight = 3;
-	double xyBoundThreshold = 10;
+	double xyBoundThreshold = 20;
 	clusterFilter(minHeight, xyBoundThreshold);
 	stitchedClusters.clear();
 
