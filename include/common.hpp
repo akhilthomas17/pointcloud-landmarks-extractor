@@ -12,6 +12,7 @@ using namespace std;
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/features/esf.h>
+#include <pcl/common/centroid.h>
 
 class Cluster
 {
@@ -99,6 +100,10 @@ public:
 	Eigen::Vector4f getCentroid(){return centroid;}
 	Eigen::Vector4f getBase(){return base;}
 	pcl::PointCloud<pcl::PointXYZ>::Ptr getSegmentCloud(){return segmentCloud;}
+	void setSegmentCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud){segmentCloud = cloud;}
+	void computeCentroid(){
+		pcl::compute3DCentroid(*segmentCloud, centroid);
+	}
 
 
 private:
@@ -118,6 +123,11 @@ class Feature
 public:
     Feature(){}
     ~Feature(){signatureAsVector.clear();}
+    Feature& operator+=(const Feature feat){
+        signatureAsVector.insert(signatureAsVector.end(),
+                                       feat.signatureAsVector.begin(), feat.signatureAsVector.end());
+        return  *this;
+    }
     string name;
     vector<float> signatureAsVector;
 };

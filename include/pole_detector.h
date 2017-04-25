@@ -20,8 +20,8 @@
 #include <pcl/filters/conditional_removal.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/distances.h>
-#include <pcl/common/centroid.h>
 #include <pcl/common/angles.h>
+#include <pcl/console/print.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/sample_consensus/method_types.h>
@@ -55,19 +55,24 @@ public:
     void clusterStitcher(double angleToVertical, double maxDistanceStitches);
     void clusterFilter(double minHeight, double xyBoundThreshold);
     void poleDetector(double minPoleHeight, double xyBoundThreshold);
-    void algorithmSingleCut(string pathToPCDFile, double xyBoundThreshold, double maxDistanceStitches, double minPoleHeight, double scaleSmall);
+    void algorithmSingleCut(string pathToPCDFile, double xyBoundThreshold,
+                            double maxDistanceStitches, double minPoleHeight, double scaleSmall);
     void buildRefClusters(string pathToPCDFile, double maxDistanceStitches, double scaleSmall);
     void loadEsfData(vector<string> &labelList, string name_file);
  	bool isPole(flann::Matrix<int> const& k_indices, vector<string> const& labelList);
-    void esfMatcher(flann::Index<flann::ChiSquareDistance<float> > const& kdTree, vector<string> const& labelList, double kdTreeThreshold);
-    void algorithmFeatureDescriptorBased(string pathToPCDFile, string pathToDataFolder, double donScaleSmall, double kdTreeThreshold);
+    void featureMatcher(flann::Index<flann::ChiSquareDistance<float> > const& kdTree,
+                        vector<string> const& labelList, double kdTreeThreshold, int mode);
+    void algorithmFeatureDescriptorBased(string pathToPCDFile, string pathToDataFolder,
+                                         double donScaleSmall, double kdTreeThreshold, int mode);
 
 private:
 
 	void readDON(string pathToFile);
     void groundPlaneRemover(double distThreshold);
-	void euclideanClusterExtractor(vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
-	void euclideanClusterExtractor(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance);
+	void euclideanClusterExtractor(vector<pcl::PointIndices> &clusterIndices,
+                                   double minClusterSize, double maxClusterSize, double clusterTolerance);
+	void euclideanClusterExtractor(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, vector<pcl::PointIndices> &clusterIndices,
+                                   double minClusterSize, double maxClusterSize, double clusterTolerance);
 	void clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDiameter);
 	void clusterCloudBuilder(vector<pcl::PointIndices> const &clusterIndices);
 	void DONBuilder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double scaleSmall, double scaleLarge);

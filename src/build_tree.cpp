@@ -25,13 +25,26 @@ computeFeature (const boost::filesystem::path &path, Feature &feature, int mode)
     }
 
     switch (mode){
-        case 0: descriptor.describeEsfFeature(object,&feature);
-
+        case 0:
+            descriptor.describeEsfFeature(object,&feature);
             break;
-        case 1:
+        case 1: {
+            Segment segment;
+            segment.setSegmentCloud(object);
+            segment.computeCentroid();
+            descriptor.describeEigenFeature(&segment,&feature);
             break;
-        case 2:
+        }
+        case 2: {
+            descriptor.describeEsfFeature(object, &feature);
+            Feature eigVal;
+            Segment segment;
+            segment.setSegmentCloud(object);
+            segment.computeCentroid();
+            descriptor.describeEigenFeature(&segment, &eigVal);
+            feature += eigVal;
             break;
+        }
     }
 
     feature.name = path.string ();

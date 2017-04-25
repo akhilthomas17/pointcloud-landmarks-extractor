@@ -742,22 +742,39 @@ bool PCLPoleDetector::isPole(flann::Matrix<int> const& k_indices, vector<string>
 	return (true);
 }
 
-void PCLPoleDetector::esfMatcher(flann::Index<flann::ChiSquareDistance<float> > const &kdTree, vector<string> const &labelList, double kdTreeThreshold){
+void PCLPoleDetector::featureMatcher(flann::Index<flann::ChiSquareDistance<float> > const &kdTree,
+                                     vector<string> const &labelList, double kdTreeThreshold, int mode){
 	boost::random::uniform_int_distribution<> dist(0, 255);
 	FeatureDescriptor descriptor;
 	for (list<Segment>::iterator it = poleLikeClusters.begin(); it != poleLikeClusters.end(); ++it){
 		Segment candidate = *it;
-		Feature esf;
-		descriptor.describeEsfFeature(candidate.getSegmentCloud(),&esf);
-		flann::Matrix<float> pt_esf = flann::Matrix<float>(new float[esf.signatureAsVector.size ()], 1, esf.signatureAsVector.size ());
-  		memcpy (&pt_esf.ptr ()[0], &esf.signatureAsVector[0], pt_esf.cols * pt_esf.rows * sizeof (float));
+        Feature feature;
+        switch (mode){
+            case 0:
+                descriptor.describeEsfFeature(candidate.getSegmentCloud(),&feature);
+                break;
+            case 1:
+                descriptor.describeEigenFeature(&candidate,&feature);
+                break;
+            case 2: {
+                descriptor.describeEsfFeature(candidate.getSegmentCloud(),&feature);
+                Feature eigVal;
+                descriptor.describeEigenFeature(&candidate,&eigVal);
+                feature+=eigVal;
+                break;
+            }
+        }
+		flann::Matrix<float> feature_flann = flann::Matrix<float>(new float[feature.signatureAsVector.size ()],
+                                                           1, feature.signatureAsVector.size ());
+  		memcpy (&feature_flann.ptr ()[0], &feature.signatureAsVector[0],
+                feature_flann.cols * feature_flann.rows * sizeof (float));
 
   		// Calculating k nearest neighbours (k = 1)
   		int k = 1;
   		flann::Matrix<int> k_indices = flann::Matrix<int>(new int[k], 1, k);
   		flann::Matrix<float> k_distances = flann::Matrix<float>(new float[k], 1, k);
-  		kdTree.knnSearch (pt_esf, k_indices, k_distances, k, flann::SearchParams (512));
-  		delete[] pt_esf.ptr ();
+  		kdTree.knnSearch (feature_flann, k_indices, k_distances, k, flann::SearchParams (512));
+  		delete[] feature_flann.ptr ();
 
   		// Checking if the mean distance is less than threshold
   		double meanDist = k_distances[0][0];
@@ -800,7 +817,7 @@ void PCLPoleDetector::esfMatcher(flann::Index<flann::ChiSquareDistance<float> > 
 }
 
 void PCLPoleDetector::algorithmFeatureDescriptorBased(string pathToPCDFile, string pathToDataFolder,
-													  double donScaleSmall, double kdTreeThreshold){
+													  double donScaleSmall, double kdTreeThreshold, int mode){
 	/// Reading Input cloud
 	readDON(pathToPCDFile);
 
@@ -823,7 +840,7 @@ void PCLPoleDetector::algorithmFeatureDescriptorBased(string pathToPCDFile, stri
 	clusterFilter(minHeight, xyBoundThreshold);
 	stitchedClusters.clear();
 
-	/// Loading ESF training data
+	/// Loading trained KdTree
 	string kdtree_file = pathToDataFolder + "kdtree.idx";
 	string training_data_h5_file = pathToDataFolder + "training_data.h5";
 	string training_data_name_file = pathToDataFolder + "training_data.list";
@@ -835,8 +852,8 @@ void PCLPoleDetector::algorithmFeatureDescriptorBased(string pathToPCDFile, stri
 	flann::Index<flann::ChiSquareDistance<float> > kdTree (data, flann::SavedIndexParams (kdtree_file));
     kdTree.buildIndex ();
 
-    /// Finding ESF for each of the clusters, followed by matching with training data
-    esfMatcher(kdTree, labelList, kdTreeThreshold);
+    /// Finding Feature signature for each of the clusters, followed by matching with trained data
+    featureMatcher(kdTree, labelList, kdTreeThreshold, mode);
 
 
 	writePCD("output.pcd");
