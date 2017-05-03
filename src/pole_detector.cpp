@@ -274,7 +274,7 @@ void PCLPoleDetector::DONThresholder(pcl::PointCloud<pcl::PointNormal>::Ptr donC
 
 	std::cout << "Filtered Pointcloud: " << donCloud->points.size () << " data points." << std::endl;
 	// Save filtered output
-	//*
+	/*
 	pcl::PCDWriter writer;
 	writer.write<pcl::PointNormal> ("don_filtered.pcd", *donCloud, true);
 	//*/
