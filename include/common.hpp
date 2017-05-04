@@ -9,6 +9,8 @@
 using namespace std;
 
 // PCL specific include files:
+#include <pcl/console/parse.h>
+#include <pcl/console/print.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/features/esf.h>

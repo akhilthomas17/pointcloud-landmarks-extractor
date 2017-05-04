@@ -1,12 +1,9 @@
-#include <pcl/console/parse.h>
-#include <pcl/console/print.h>
 #include <pcl/io/pcd_io.h>
 #include <boost/filesystem.hpp>
 #include <flann/flann.h>
-#include <flann/io/hdf5.h>
-#include <fstream>
 #include <FeatureDescriptor.h>
-
+#include <common.hpp>
+#include <RandomForestLearner.hpp>
 
 /** \brief Opens the file and compute a feature signature as per the mode
   * \param path the input file name
@@ -59,34 +56,53 @@ computeFeature (const boost::filesystem::path &path, Feature &feature, int mode)
   */
 void
 loadFeatureModels (const boost::filesystem::path &base_dir, const std::string &extension,
-                   std::vector<Feature> &models, int mode)
+                   cv::Mat* _features, cv::Mat* _labels, int mode)
 {
   if (!boost::filesystem::exists (base_dir) && !boost::filesystem::is_directory (base_dir))
     return;
 
-  for (boost::filesystem::directory_iterator it (base_dir); it != boost::filesystem::directory_iterator (); ++it)
+    vector<int> labels;
+    _features->release();
+    _labels->release();
+
+
+    for (boost::filesystem::directory_iterator it (base_dir); it != boost::filesystem::directory_iterator (); ++it)
   {
     if (boost::filesystem::is_directory (it->status ()))
     {
       std::stringstream ss;
       ss << it->path ();
-      pcl::console::print_highlight ("Loading %s (%lu models loaded so far).\n", ss.str ().c_str (), (unsigned long)models.size ());
-      loadFeatureModels (it->path (), extension, models, mode);
+      pcl::console::print_highlight ("Loading %s (%lu models loaded so far).\n", ss.str ().c_str (), (unsigned long)_labels->rows);
+      loadFeatureModels (it->path (), extension, _features, _labels, mode);
     }
-    if (boost::filesystem::is_regular_file (it->status ()) && boost::filesystem::extension (it->path ()) == extension)
+
+      if (boost::filesystem::is_regular_file (it->status ()) && boost::filesystem::extension (it->path ()) == extension)
     {
       Feature m;
-      if (computeFeature (base_dir / it->path ().filename (), m, mode))
-        models.push_back (m);
+      if (computeFeature (base_dir / it->path ().filename (), m, mode)) {
+          cerr << _features->rows<<endl;
+          cv::Mat feature(648, 1, CV_32F);
+          cv::Mat(m.signatureAsVector).copyTo(feature);
+          _features->push_back(feature.reshape(0,1));
+
+          if (m.name.find("Pole") != -1) {
+              labels.push_back(0);
+          } else if (m.name.find("Tree") != -1) {
+              labels.push_back(1);
+          } else
+              labels.push_back(2);
+
+      }
     }
   }
+    cv::Mat(labels).copyTo(*_labels);
 }
 
 int
 main (int argc, char** argv)
 {
     // Command line parsing and getting the operation mode (Which feature descriptor to be used)
-    int mode = 0;
+    int mode = 2;
     if (argc < 2)
     {
       PCL_ERROR ("Need at least two parameters! Syntax is: %s [model_directory] [options]\n", argv[0]);
@@ -108,23 +124,29 @@ main (int argc, char** argv)
     string extension (".pcd");
     transform (extension.begin (), extension.end (), extension.begin (), (int(*)(int))tolower);
 
-    string kdtree_idx_file_name = std::string(argv[1]) + "kdtree.idx";
-    string training_data_h5_file_name = std::string(argv[1]) + "training_data.h5";
-    string training_data_list_file_name = std::string(argv[1]) + "training_data.list";
     string mode_file_name = string(argv[1]) + "mode.txt";
 
     std::ofstream mode_file(mode_file_name.c_str(), ios::out | ios::trunc);
     mode_file << "Mode: " << mode << endl;
 
 
-    std::vector<Feature> models;
+    cv::Mat features;
+    cv::Mat labels;
 
     // Load the model histograms
-    loadFeatureModels (argv[1], extension, models, mode);
-    pcl::console::print_highlight ("Loaded %d VFH models. Creating training data %s/%s.\n",
-      (int)models.size (), training_data_h5_file_name.c_str (), training_data_list_file_name.c_str ());
+    loadFeatureModels (argv[1], extension, &features, &labels, mode);
+    pcl::console::print_highlight("Feature rows: %d, Label rows: %d \n", features.rows, labels.rows);
+    pcl::console::print_highlight ("Loaded %d clusters. Training the classifier.\n", features.rows);
+
+    RandomForestLearner classifier;
+    classifier.trainMultiClass(features, labels, 100);
+    features.release();
+    labels.release();
+
+
 
     // Convert data into FLANN format
+    /*
     flann::Matrix<float> data (new float[models.size () * models[0].signatureAsVector.size ()], models.size (), models[0].signatureAsVector.size ());
 
     for (size_t i = 0; i < data.rows; ++i)
@@ -139,6 +161,7 @@ main (int argc, char** argv)
     fs << models[i].name << "\n";
     fs.close ();
 
+
     // Build the tree index and save it to disk
     pcl::console::print_error ("Building the kdtree index (%s) for %d elements...\n", kdtree_idx_file_name.c_str (), (int)data.rows);
     flann::Index<flann::ChiSquareDistance<float> > index (data, flann::LinearIndexParams ());
@@ -146,6 +169,7 @@ main (int argc, char** argv)
     index.buildIndex ();
     index.save (kdtree_idx_file_name);
     delete[] data.ptr ();
+     */
 
     return (0);
 }

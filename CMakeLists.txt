@@ -3,8 +3,11 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 project(pole_detector)
 
 find_package(PCL 1.3 REQUIRED)
+find_package( OpenCV REQUIRED )
+
 
 include_directories(
+        ${OpenCV_INCLUDE_DIRS}
 ${PCL_INCLUDE_DIRS}
 include
 )
@@ -28,10 +31,18 @@ if(HDF5_FOUND)
   target_link_libraries(pole_detector ${PCL_LIBRARIES} ${Boost_LIBRARIES}
                                  ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY})
 
-  add_executable(build_tree
-    src/build_tree.cpp
-    src/FeatureDescriptor.cpp)
-  target_link_libraries(build_tree ${PCL_LIBRARIES} ${Boost_LIBRARIES}
+  add_executable(train_knn
+          src/train_knn.cpp
+          src/FeatureDescriptor.cpp)
+
+  target_link_libraries(train_knn ${PCL_LIBRARIES} ${Boost_LIBRARIES}
                                  ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY})
+  add_executable(train_randomForest
+          src/train_randomForest.cpp
+          src/RandomForestLearner.cpp
+          src/FeatureDescriptor.cpp)
+
+  target_link_libraries(train_randomForest ${PCL_LIBRARIES} ${Boost_LIBRARIES}
+          ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY} ${OpenCV_LIBS})
 
 endif(HDF5_FOUND)
