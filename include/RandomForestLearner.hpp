@@ -7,6 +7,7 @@
 
 #include <opencv2/ml/ml.hpp>
 #include "common.hpp"
+using namespace cv;
 
 class RandomForestLearner {
 private:
@@ -19,7 +20,8 @@ public:
     ~RandomForestLearner();
     void loadTrainingData(string pathToFolder, cv::Mat& trainFeatures, cv::Mat& trainLabels);
     void trainMultiClass(const cv::Mat& trainFeatures, const cv::Mat& trainLabels, int numTrees);
-    void predictClass(Feature candidate, float maxDistance, string predictedClass);
+    void saveClassifier(string pathToClassifier);
+    void predictClass(Feature candidate, string& predictedClass);
     void loadClassifier(string pathToClassifier);
 };
 

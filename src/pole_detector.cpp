@@ -1,4 +1,5 @@
 #include <pole_detector.h>
+#include <RandomForestLearner.hpp>
 
 PCLPoleDetector::PCLPoleDetector(){
 	inCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
@@ -742,8 +743,8 @@ bool PCLPoleDetector::isPole(flann::Matrix<int> const& k_indices, vector<string>
 	return (true);
 }
 
-void PCLPoleDetector::featureMatcher(flann::Index<flann::ChiSquareDistance<float> > const &kdTree,
-                                     vector<string> const &labelList, double kdTreeThreshold, int mode){
+void PCLPoleDetector::knnFinder(flann::Index<flann::ChiSquareDistance<float> > const &kdTree,
+                                vector<string> const &labelList, double kdTreeThreshold, int mode){
 	boost::random::uniform_int_distribution<> dist(0, 255);
 	FeatureDescriptor descriptor;
 	for (list<Segment>::iterator it = poleLikeClusters.begin(); it != poleLikeClusters.end(); ++it){
@@ -853,8 +854,101 @@ void PCLPoleDetector::algorithmFeatureDescriptorBased(string pathToPCDFile, stri
     kdTree.buildIndex ();
 
     /// Finding Feature signature for each of the clusters, followed by matching with trained data
-    featureMatcher(kdTree, labelList, kdTreeThreshold, mode);
+    knnFinder(kdTree, labelList, kdTreeThreshold, mode);
 
 
 	writePCD("output.pcd");
+}
+
+void PCLPoleDetector::featureMatcher(RandomForestLearner& classifier, int mode){
+    boost::random::uniform_int_distribution<> dist(0, 255);
+    FeatureDescriptor descriptor;
+    for (list<Segment>::iterator it = poleLikeClusters.begin(); it != poleLikeClusters.end(); ++it){
+        Segment candidate = *it;
+        Feature feature;
+        switch (mode){
+            case 0:
+                descriptor.describeEsfFeature(candidate.getSegmentCloud(),&feature);
+                break;
+            case 1:
+                descriptor.describeEigenFeature(&candidate,&feature);
+                break;
+            case 2: {
+                descriptor.describeEsfFeature(candidate.getSegmentCloud(),&feature);
+                Feature eigVal;
+                descriptor.describeEigenFeature(&candidate,&eigVal);
+                feature+=eigVal;
+                break;
+            }
+        }
+        // Predicting the label using classifier
+        string predictedClass;
+        classifier.predictClass(feature, predictedClass);
+
+        // Check if the cluster is pole. Else, it is detected as a tree
+        if(predictedClass.find("Pole") != -1){
+            detectedPoles.push_back(candidate);
+            //* Uncomment to plot single cloud
+            //** Making single color for each detected pole
+            uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
+            uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+            for (list<Cluster>::iterator it2 = candidate.getSegmentParts().begin(); it2 != candidate.getSegmentParts().end(); ++it2){
+                for (size_t i = 0; i < it2->getClusterCloud()->points.size(); ++i){
+                    pcl::PointXYZRGB PtColored;
+                    makeColoredPoint(PtColored, it2->getClusterCloud()->points[i], rgb);
+                    poleCloud->points.push_back(PtColored);
+                }
+            }
+            //*/
+        }else if (predictedClass.find("Tree") != -1){
+            detectedTrees.push_back(candidate);
+            //* Uncomment to plot single cloud
+            //** Making single color for each detected pole
+            uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
+            uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+            for (list<Cluster>::iterator it2 = candidate.getSegmentParts().begin(); it2 != candidate.getSegmentParts().end(); ++it2){
+                for (size_t i = 0; i < it2->getClusterCloud()->points.size(); ++i){
+                    pcl::PointXYZRGB PtColored;
+                    makeColoredPoint(PtColored, it2->getClusterCloud()->points[i], rgb);
+                    treeCloud->points.push_back(PtColored);
+                }
+            }
+            //*/
+        }
+
+    }
+    cerr << "Number of detected Poles: " << detectedPoles.size() << endl;
+    cerr << "Number of detected Trees: " << detectedTrees.size() << endl;
+}
+
+void PCLPoleDetector::algorithmClassifierBased(string pathToPCDFile, string pathToClassifier,
+                                               double donScaleSmall, int mode){
+    /// Reading Input cloud
+    readDON(pathToPCDFile);
+
+    /// DON thresholding followed by Euclidean clustering. ScaleSmall here is the Cluster Threshold
+    double maxPts = 50000;
+    double minPts = 15;
+    double thresholdDON = 0.25;
+    double scaleLarge = donScaleSmall*10;
+    segmenterDON(minPts, maxPts, donScaleSmall, scaleLarge, thresholdDON);
+
+    /// Cluster Stitching
+    double angleToVertical = 0.35;
+    double maxDistanceStitches = 1.5;
+    clusterStitcher(angleToVertical, maxDistanceStitches);
+    rawClusters.clear();
+
+    /// Cluster filters based on "minimum height" and "maximum xy-bound"
+    double minHeight = 3;
+    double xyBoundThreshold = 20;
+    clusterFilter(minHeight, xyBoundThreshold);
+    stitchedClusters.clear();
+
+    // Loading Random Forest Classifier
+    RandomForestLearner classifier;
+    classifier.loadClassifier(pathToClassifier);
+    featureMatcher(classifier, mode);
+
+    writePCD("output.pcd");
 }

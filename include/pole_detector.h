@@ -3,6 +3,7 @@
 
 // Include required classes
 #include <FeatureDescriptor.h>
+#include <RandomForestLearner.hpp>
 
 // General include files:
 #include <boost/random/mersenne_twister.hpp>
@@ -60,10 +61,12 @@ public:
     void buildRefClusters(string pathToPCDFile, double maxDistanceStitches, double scaleSmall);
     void loadEsfData(vector<string> &labelList, string name_file);
  	bool isPole(flann::Matrix<int> const& k_indices, vector<string> const& labelList);
-    void featureMatcher(flann::Index<flann::ChiSquareDistance<float> > const& kdTree,
-                        vector<string> const& labelList, double kdTreeThreshold, int mode);
+    void knnFinder(flann::Index<flann::ChiSquareDistance<float> > const &kdTree,
+                   vector<string> const &labelList, double kdTreeThreshold, int mode);
     void algorithmFeatureDescriptorBased(string pathToPCDFile, string pathToDataFolder,
                                          double donScaleSmall, double kdTreeThreshold, int mode);
+	void featureMatcher(RandomForestLearner& classifier, int mode);
+	void algorithmClassifierBased(string pathToPCDFile, string pathToClassifier, double donScaleSmall, int mode);
 
 private:
 

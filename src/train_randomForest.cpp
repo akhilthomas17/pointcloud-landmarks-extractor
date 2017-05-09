@@ -125,6 +125,7 @@ main (int argc, char** argv)
     transform (extension.begin (), extension.end (), extension.begin (), (int(*)(int))tolower);
 
     string mode_file_name = string(argv[1]) + "mode.txt";
+    string classifier_file = string(argv[1]) + "PoleTreeClassifier.xml";
 
     std::ofstream mode_file(mode_file_name.c_str(), ios::out | ios::trunc);
     mode_file << "Mode: " << mode << endl;
@@ -140,6 +141,7 @@ main (int argc, char** argv)
 
     RandomForestLearner classifier;
     classifier.trainMultiClass(features, labels, 100);
+    classifier.saveClassifier(classifier_file);
     features.release();
     labels.release();
 

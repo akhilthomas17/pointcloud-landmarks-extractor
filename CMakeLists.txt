@@ -26,10 +26,11 @@ if(HDF5_FOUND)
   add_executable(pole_detector
     src/pole_detector.cpp
 	src/main.cpp
-	src/FeatureDescriptor.cpp)
+	src/FeatureDescriptor.cpp
+          src/RandomForestLearner.cpp)
 
   target_link_libraries(pole_detector ${PCL_LIBRARIES} ${Boost_LIBRARIES}
-                                 ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY})
+                                 ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY} ${OpenCV_LIBS})
 
   add_executable(train_knn
           src/train_knn.cpp

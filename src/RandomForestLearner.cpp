@@ -44,8 +44,6 @@ void RandomForestLearner::trainMultiClass(const cv::Mat &trainFeatures, const cv
     cout << "starting forest training ..." << endl;
     poleTreeClassifier->train(trainFeatures, CV_ROW_SAMPLE, trainLabels, cv::Mat(), cv::Mat(), cv::Mat(), cv::Mat(), trees_params);
 
-    poleTreeClassifier->save("poleTreeClassifier.xml");
-    cout << "forest training saved!" << endl;
 //	trees->load("trees.xml");
     cout << "varImportance:" << endl << poleTreeClassifier->getVarImportance() << endl;
     ofstream sss("PLOTS/varImportance.gnuplot");
@@ -61,4 +59,30 @@ void RandomForestLearner::trainMultiClass(const cv::Mat &trainFeatures, const cv
     ss << "gnuplot PLOTS/varImportance.gnuplot";
     if (system(ss.str().c_str()) < 0)
         cout << "wasn't able to call gnuplot" << std::endl;
+}
+
+void RandomForestLearner::saveClassifier(string pathToClassifier){
+    poleTreeClassifier->save(pathToClassifier.c_str());
+    cout << "Forest classifier saved in " << pathToClassifier << endl;
+}
+
+void RandomForestLearner::loadClassifier(string pathToClassifier){
+    poleTreeClassifier->load(pathToClassifier.c_str());
+}
+
+void RandomForestLearner::predictClass(Feature candidate, string& predictedClass) {
+    cv::Mat featureMat;
+    cv::Mat(candidate.signatureAsVector).copyTo(featureMat);
+    int label = (int) poleTreeClassifier->predict(featureMat);
+    switch (label){
+        case 0:
+            predictedClass = "Pole";
+            break;
+        case 1:
+            predictedClass = "Tree";
+            break;
+        case 2:
+            predictedClass = "None";
+            break;
+    }
 }
