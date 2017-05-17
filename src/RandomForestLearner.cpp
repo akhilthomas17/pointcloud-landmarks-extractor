@@ -17,25 +17,8 @@ RandomForestLearner::~RandomForestLearner() {
     delete poleTreeClassifier;
 }
 
-void RandomForestLearner::trainMultiClass(const cv::Mat &trainFeatures, const cv::Mat &trainLabels, int numTrees){
+void RandomForestLearner::trainMultiClass(const cv::Mat &trainFeatures, const cv::Mat &trainLabels, CvRTParams trees_params ){
     //RTrees
-    CvRTParams trees_params;
-    //float priors2[] = {0.5,0.5};
-    int maxDepth = 60;
-    trees_params = CvRTParams(
-            maxDepth,			/* max_depth */
-            3,				/* min_sample_count */
-            0,									/* regression_accuracy */
-            false,								/* use_surrogates */
-            10,									/* max_categories */
-            0,								/* priors */
-            true,								/* calc_var_importance */
-            0,									/* nactive_vars */
-            numTrees,		/* max_num_of_trees_in_the_forest */
-            0,									/* forest_accuracy */
-            CV_TERMCRIT_ITER|CV_TERMCRIT_EPS
-    );
-    trees_params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, numTrees, 0);
     pcl::console::print_highlight("Learning trees with a max depth of %d, a max amount of %d trees, breaking with an error smaller than %f.",
                     trees_params.max_depth, trees_params.term_crit.max_iter, trees_params.term_crit.epsilon);
 

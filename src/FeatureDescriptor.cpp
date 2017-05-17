@@ -21,12 +21,16 @@ void FeatureDescriptor::describeEsfFeature(pcl::PointCloud<pcl::PointXYZ>::Ptr s
 
     // Making esf signature as a vector of floats
     esfFeature->signatureAsVector.resize(640);
+    copy(descriptor->points[0].histogram, descriptor->points[0].histogram + 640, esfFeature->signatureAsVector.begin());
+    //cerr << esfFeature->signatureAsVector.size() <<endl;
+    /*
     vector <pcl::PCLPointField> fields;
     int esf_idx;
     esf_idx = pcl::getFieldIndex (*descriptor, "esf", fields);
     for (size_t i = 0; i < fields[esf_idx].count; ++i){
         esfFeature->signatureAsVector[i] = descriptor->points[0].histogram[i];
     }
+    //*/
 }
 
 void FeatureDescriptor::describeEigenFeature(Segment* segment, Feature* eigenFeature)

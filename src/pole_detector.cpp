@@ -868,6 +868,15 @@ void PCLPoleDetector::featureMatcher(RandomForestLearner& classifier, int mode){
         Feature feature;
         switch (mode){
             case 0:
+                /*
+                for (int i = 0; i < 9; ++i) {
+                    Feature temp_feature;
+                    descriptor.describeEsfFeature(candidate.getSegmentCloud(),&temp_feature);
+                    string predictedClass;
+                    classifier.predictClass(temp_feature, predictedClass);
+                    cerr << predictedClass << endl;
+                }
+                 //*/
                 descriptor.describeEsfFeature(candidate.getSegmentCloud(),&feature);
                 break;
             case 1:
@@ -884,6 +893,8 @@ void PCLPoleDetector::featureMatcher(RandomForestLearner& classifier, int mode){
         // Predicting the label using classifier
         string predictedClass;
         classifier.predictClass(feature, predictedClass);
+        //cerr << predictedClass << endl;
+        //cerr << "-------" << endl;
 
         // Check if the cluster is pole. Else, it is detected as a tree
         if(predictedClass.find("Pole") != -1){

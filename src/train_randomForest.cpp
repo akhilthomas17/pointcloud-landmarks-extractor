@@ -80,7 +80,7 @@ loadFeatureModels (const boost::filesystem::path &base_dir, const std::string &e
     {
       Feature m;
       if (computeFeature (base_dir / it->path ().filename (), m, mode)) {
-          cerr << _features->rows<<endl;
+          //cerr << _features->rows<<endl;
           cv::Mat feature(648, 1, CV_32F);
           cv::Mat(m.signatureAsVector).copyTo(feature);
           _features->push_back(feature.reshape(0,1));
@@ -103,20 +103,26 @@ main (int argc, char** argv)
 {
     // Command line parsing and getting the operation mode (Which feature descriptor to be used)
     int mode = 2;
+    int maxDepth = 60;
+    int numTrees = 100;
     if (argc < 2)
     {
-      PCL_ERROR ("Need at least two parameters! Syntax is: %s [model_directory] [options]\n", argv[0]);
+      PCL_ERROR ("Need at least two parameters! Syntax is: %s [model_directory] [options] [max_depth] [num_trees]\n", argv[0]);
       pcl::console::print_highlight("[options] \n--eigVal : To use eigen value based features\n--esf : To use esf based features\n--combined : To use combination of above two\n");
       return (-1);
     }
     else if(argc>2)
     {
-    if (strcmp(argv[2], "--esf")==0)
-        mode = 0;
-    else if (strcmp(argv[2], "--eigVal")==0)
-        mode = 1;
-    else if (strcmp(argv[2], "--combined")==0)
-        mode = 2;
+        if (strcmp(argv[2], "--esf")==0)
+            mode = 0;
+        else if (strcmp(argv[2], "--eigVal")==0)
+            mode = 1;
+        else if (strcmp(argv[2], "--combined")==0)
+            mode = 2;
+        if (argc > 3){
+            maxDepth = atoi(argv[3]);
+            numTrees = atoi(argv[4]);
+        }
     }
     pcl::console::print_highlight("Mode selected is %d\n", mode);
 
@@ -140,7 +146,24 @@ main (int argc, char** argv)
     pcl::console::print_highlight ("Loaded %d clusters. Training the classifier.\n", features.rows);
 
     RandomForestLearner classifier;
-    classifier.trainMultiClass(features, labels, 100);
+    CvRTParams trees_params;
+    //float priors2[] = {0.5,0.5};
+
+    trees_params = CvRTParams(
+            maxDepth,			/* max_depth */
+            2,				/* min_sample_count */
+            0,									/* regression_accuracy */
+            false,								/* use_surrogates */
+            10,									/* max_categories */
+            0,								/* priors */
+            true,								/* calc_var_importance */
+            0,									/* nactive_vars ääööää*/
+            numTrees,		/* max_num_of_trees_in_the_forest */
+            0,									/* forest_accuracy */
+            CV_TERMCRIT_ITER|CV_TERMCRIT_EPS
+    );
+    trees_params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, numTrees, 0);
+    classifier.trainMultiClass(features, labels, trees_params);
     classifier.saveClassifier(classifier_file);
     features.release();
     labels.release();
