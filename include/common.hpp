@@ -15,6 +15,7 @@ using namespace std;
 #include <pcl/point_types.h>
 #include <pcl/features/esf.h>
 #include <pcl/common/centroid.h>
+#include <pcl/common/distances.h>
 
 class Cluster
 {

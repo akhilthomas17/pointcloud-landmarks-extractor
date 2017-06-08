@@ -1,5 +1,4 @@
 #include <pole_detector.h>
-#include <RandomForestLearner.hpp>
 
 PCLPoleDetector::PCLPoleDetector(){
 	inCloud = pcl::PointCloud<pcl::PointXYZ>::Ptr (new pcl::PointCloud<pcl::PointXYZ>);
@@ -9,11 +8,6 @@ PCLPoleDetector::PCLPoleDetector(){
 	poleLikeCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
 	poleCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
 	treeCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
-	/* Uncomment to enable visualization
-	viewer = boost::shared_ptr<pcl::visualization::PCLVisualizer> (new pcl::visualization::PCLVisualizer ("Pole Detector"));
-	viewer->setBackgroundColor (0, 0, 0);
-	viewer->addCoordinateSystem (3.0, "coordinates", 0);
-	//*/
 }
 
 
@@ -23,37 +17,6 @@ PCLPoleDetector::~PCLPoleDetector(){
 	poleLikeClusters.clear();
 	detectedPoles.clear();
 	detectedTrees.clear();
-}
-
-
-void PCLPoleDetector::pointCloudVisualizer(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, string name){
-	boost::random::uniform_int_distribution<> dist(0, 255);
-	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
-	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> colourHandler(cloud, r, g, b);
-	viewer->addPointCloud<pcl::PointXYZ> (cloud, colourHandler, name);
-	viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, name);
-}
-
-
-void PCLPoleDetector::pointCloudVisualizer(list<Cluster> const &clusterList, string id){
-	boost::random::uniform_int_distribution<> dist(0, 255);
-	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
-	int j = 0;
-	pcl::PointXYZ center;
-	for (list<Cluster>::const_iterator it = clusterList.begin(); it != clusterList.end(); ++it){
-		Cluster cluster = *it;
-		eigenV4f2PointXYZ(cluster.getCentroid(), center);
-		viewer->addSphere(center, cluster.getRadius()/2, r, g, b, id+boost::lexical_cast<string>(j));
-		j++;
-	}
-}
-
-void PCLPoleDetector::pointCloudVisualizer(Cluster &cluster, string id){
-	boost::random::uniform_int_distribution<> dist(0, 255);
-	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
-	pcl::PointXYZ center;
-	eigenV4f2PointXYZ(cluster.getCentroid(), center);
-	viewer->addSphere(center, cluster.getRadius()/2, r, g, b, id);
 }
 
 
@@ -121,16 +84,6 @@ void PCLPoleDetector::writeTrees(){
 }
 
 
-void PCLPoleDetector::statisticalOutlierRemover(double mean, double stdDev){
-	// Create the filtering object
-	pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-	sor.setInputCloud (processCloud);
-	sor.setMeanK (mean);
-	sor.setStddevMulThresh (stdDev);
-	sor.filter (*processCloud);
-}
-
-
 
 void PCLPoleDetector::groundPlaneRemover(double distThreshold){
 	// Create the segmentation object for the planar model and set all the parameters
@@ -176,10 +129,11 @@ void PCLPoleDetector::groundPlaneRemover(double distThreshold){
 }
 
 
-void PCLPoleDetector::preProcessor(double meanKNoise, double stdDevNoise, double distThreshold){
+void PCLPoleDetector::preProcessor(int meanKNoise, double stdDevNoise, double distThreshold){
   	// Filtering the point cloud to remove outliers
   	// The mean and stdDev values have to be tuned for the particular case
-  	statisticalOutlierRemover(meanKNoise, stdDevNoise);
+    Preprocessor preprocessor(processCloud);
+    preprocessor.outlierRemover(meanKNoise, stdDevNoise);
   	pcl::PointXYZ minPt , maxPt;
   	pcl::getMinMax3D(*processCloud, minPt, maxPt);
 
@@ -248,11 +202,11 @@ void PCLPoleDetector::DONBuilder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud
   	// Compute DoN
   	don.computeFeature (*donCloud);
 
-  	/* To write DON cloud to file, uncomment below
+  	//* To write DON cloud to file, uncomment below
   	// Save DoN features
   	pcl::PCDWriter writer;
  	writer.write<pcl::PointNormal> ("don.pcd", *donCloud, true);
-	*/
+	//*/
 }
 
 void PCLPoleDetector::DONThresholder(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, double thresholdDON){
@@ -282,19 +236,6 @@ void PCLPoleDetector::DONThresholder(pcl::PointCloud<pcl::PointNormal>::Ptr donC
 
 }
 
-void PCLPoleDetector::euclideanClusterExtractor(vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance){
-	// Creating the KdTree object for the search method of the extraction
-  	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-  	tree->setInputCloud (processCloud);
-
-  	pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  	ec.setClusterTolerance (clusterTolerance);
-  	ec.setMinClusterSize (minClusterSize);
-  	ec.setMaxClusterSize (maxClusterSize);
-  	ec.setSearchMethod (tree);
-  	ec.setInputCloud (processCloud);
-  	ec.extract (clusterIndices);
-}
 
 void PCLPoleDetector::euclideanClusterExtractor(pcl::PointCloud<pcl::PointNormal>::Ptr donCloud, vector<pcl::PointIndices> &clusterIndices, double minClusterSize, double maxClusterSize, double clusterTolerance){
 	// Creating the KdTree object for the search method of the extraction
@@ -310,51 +251,6 @@ void PCLPoleDetector::euclideanClusterExtractor(pcl::PointCloud<pcl::PointNormal
   	ec.extract (clusterIndices);
 }
 
-
-void PCLPoleDetector::clusterFilter(vector<pcl::PointIndices> const &clusterIndices, double maxDiameter){
-  	int j = 0;
-  	boost::random::uniform_int_distribution<> dist(0, 255);
-  	for (vector<pcl::PointIndices>::const_iterator it = clusterIndices.begin (); it != clusterIndices.end (); ++it){
-  		//** Creating the point cloud for each cluster
-    	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-    	for (vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit){
-      		cloud_cluster->points.push_back (processCloud->points[*pit]); //*
-    	}
-    	cloud_cluster->width = cloud_cluster->points.size ();
-    	cloud_cluster->height = 1;
-    	cloud_cluster->is_dense = true;
-    	//pointCloudVisualizer(cloud_cluster, 'b', "cluster" + boost::lexical_cast<string>(j));
-
-    	//** Check if the cluster satisfies Bounding box max-Diameter criterion
-    	pcl::PointXYZ minPt, maxPt;
-    	Eigen::Vector4f minVec, maxVec;
-    	pcl::getMinMax3D(*cloud_cluster, minPt, maxPt);
-    	PointXYZ2eigenV4f2D(minVec, minPt);
-    	PointXYZ2eigenV4f2D(maxVec, maxPt);
-    	double clusterDiameter = (maxVec - minVec).norm();
-    	//cerr << "Max Distance of cluster " << j << ": " << maxDistCluster << endl;
-    	if (clusterDiameter <= maxDiameter){
-    		Eigen::Vector4f vecCentroid;
-    		pcl::compute3DCentroid(*cloud_cluster, vecCentroid);
-    		//cerr << "Radius of cluster " << j << ": " << radius << endl;
-    		//Cluster cluster(vecCentroid, radius);
-    		rawClusters.push_back(Cluster(vecCentroid, clusterDiameter/2, minPt, maxPt, cloud_cluster));
-
-    		/* Uncomment to save the un-stitched clusters
-    		//** Making color for each cluster
-	    	uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
-			uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
-			//**
-    		for (size_t i = 0; i < cloud_cluster->points.size(); ++i){
-    			pcl::PointXYZRGB PtColored;
-      			makeColoredPoint(PtColored, cloud_cluster->points[i], rgb);
-      			clusterCloud->points.push_back(PtColored);
-    		}
-    		//*/
-    		j++;
-    	}
-   	}
-}
 
 void PCLPoleDetector::clusterCloudBuilder(vector<pcl::PointIndices> const &clusterIndices){
   	boost::random::uniform_int_distribution<> dist(0, 255);
@@ -393,34 +289,22 @@ void PCLPoleDetector::clusterCloudBuilder(vector<pcl::PointIndices> const &clust
     }
 }
 
-void PCLPoleDetector::segmenterDON(double minPts, double maxPts, double scaleSmall, double scaleLarge, double thresholdDON){
+void PCLPoleDetector::segmenterDON(double minPts, double maxPts, double scaleSmall,
+                                   double scaleLarge, double thresholdDON){
 	// Create output cloud for DoN results
-  	//pcl::PointCloud<pcl::PointNormal>::Ptr donCloud (new pcl::PointCloud<pcl::PointNormal>);
+  	pcl::PointCloud<pcl::PointNormal>::Ptr donCloud (new pcl::PointCloud<pcl::PointNormal>);
   	//pcl::copyPointCloud<pcl::PointXYZ, pcl::PointNormal>(*processCloud, *donCloud);
   	//DONBuilder(donCloud, scaleSmall, scaleLarge);
-	pcl::PointCloud<pcl::PointNormal>::Ptr donCloud(new pcl::PointCloud<pcl::PointNormal>);
-  	donCloud = _donCloud;
+    donCloud = _donCloud;
 
-  	DONThresholder(donCloud, thresholdDON);
+  	DONThresholder(donCloud, 0.25);
   	pcl::copyPointCloud<pcl::PointNormal, pcl::PointXYZ>(*donCloud, *processCloud);
 
   	vector<pcl::PointIndices> clusterIndices;
-  	euclideanClusterExtractor(donCloud, clusterIndices, minPts, maxPts, scaleSmall);
+  	euclideanClusterExtractor(donCloud, clusterIndices, minPts, maxPts, thresholdDON);
 
 	clusterCloudBuilder(clusterIndices);
 	cerr << "Number of clusters found: " << rawClusters.size() << endl;
-}
-
-void PCLPoleDetector::segmenterSingleCut(double minPts, double maxPts, double clusterTolerance, double maxDiameter){
-	vector<pcl::PointIndices> clusterIndices;
-
-	cerr << "Size of preProcessed cloud: " << processCloud->width * processCloud->height << " data points." << endl;
-	euclideanClusterExtractor(clusterIndices, minPts, maxPts, clusterTolerance);
-	cerr << "Number of clusters found: " << clusterIndices.size() << endl;
-
-	//For post-filtering. To remove very large unprobable clusters
-	clusterFilter(clusterIndices, maxDiameter);
-	cerr << "Number of clusters after filtering: " << rawClusters.size() << endl;
 }
 
 
@@ -933,14 +817,27 @@ void PCLPoleDetector::featureMatcher(RandomForestLearner& classifier, int mode){
 }
 
 void PCLPoleDetector::algorithmClassifierBased(string pathToPCDFile, string pathToClassifier,
-                                               double donScaleSmall, int mode){
+                                               double thresholdDON, int mode){
     /// Reading Input cloud
     readDON(pathToPCDFile);
+    /* Uncomment to read raw pcd as input
+    readPCD(pathToPCDFile);
+    double meanKNoise = 10;
+    double stdDevNoise = 1;
 
-    /// DON thresholding followed by Euclidean clustering. ScaleSmall here is the Cluster Threshold
+    cerr << "PointCloud size before noise removal: " << processCloud->width * processCloud->height << " data points." << endl;
+
+
+    Preprocessor preprocessor(processCloud);
+    preprocessor.outlierRemover(meanKNoise, stdDevNoise);
+
+    cerr << "PointCloud size after noise removal: " << processCloud->width * processCloud->height << " data points." << endl;
+
+    //*/
+    /// DON thresholding followed by Euclidean clustering. thresholdDON here is the Cluster Threshold
     double maxPts = 50000;
     double minPts = 15;
-    double thresholdDON = 0.25;
+    double donScaleSmall = 0.5;
     double scaleLarge = donScaleSmall*10;
     segmenterDON(minPts, maxPts, donScaleSmall, scaleLarge, thresholdDON);
 
@@ -951,7 +848,7 @@ void PCLPoleDetector::algorithmClassifierBased(string pathToPCDFile, string path
     rawClusters.clear();
 
     /// Cluster filters based on "minimum height" and "maximum xy-bound"
-    double minHeight = 3;
+    double minHeight = 2;
     double xyBoundThreshold = 20;
     clusterFilter(minHeight, xyBoundThreshold);
     stitchedClusters.clear();

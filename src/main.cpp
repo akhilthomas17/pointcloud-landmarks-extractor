@@ -3,7 +3,7 @@ int main(int argc, char const *argv[])
 {
 	if ( argc != 4 ) // argc should be 5 for correct execution
     {
-        cout<<"usage: "<< argv[0] <<" <path to pcd file> <DON small scale> <mode>\n";
+        cout<<"usage: "<< argv[0] <<" <path to pcd file> <DON cluster threshold> <mode>\n";
         pcl::console::print_highlight("[mode]\n0 : To use esf based features\n1 : To use eigen value based features\n2 : To use combination of above two\n");
     }
 
