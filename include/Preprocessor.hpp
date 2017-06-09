@@ -6,7 +6,10 @@
 #define POLE_DETECTOR_PREPROCESSOR_HPP
 
 #include <pcl/filters/statistical_outlier_removal.h>
-#include <common.hpp>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/filters/extract_indices.h>
+
+#include <Structures.hpp>
 
 
 
@@ -17,6 +20,7 @@ public:
     }
     ~Preprocessor(){}
     void outlierRemover(int mean, double stdDev);
+    void groundPlaneRemover(int distThreshold);
 private:
     pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud;
 };

@@ -6,7 +6,7 @@
 #define POLE_DETECTOR_RANDOMFORESTLEARNER_HPP
 
 #include <opencv2/ml/ml.hpp>
-#include "common.hpp"
+#include "Structures.hpp"
 using namespace cv;
 
 class RandomForestLearner {

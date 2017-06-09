@@ -27,7 +27,7 @@ if(HDF5_FOUND)
     src/pole_detector.cpp
 	src/main.cpp
 	src/FeatureDescriptor.cpp
-          src/RandomForestLearner.cpp)
+          src/RandomForestLearner.cpp include/Visualizer.hpp src/Preprocessor.cpp include/Preprocessor.hpp src/Segmenter.cpp include/Segmenter.hpp include/IO.hpp)
 
   target_link_libraries(pole_detector ${PCL_LIBRARIES} ${Boost_LIBRARIES}
                                  ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY} ${OpenCV_LIBS})

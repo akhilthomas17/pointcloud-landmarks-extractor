@@ -2,7 +2,7 @@
 #include <boost/filesystem.hpp>
 #include <flann/flann.h>
 #include <FeatureDescriptor.h>
-#include <common.hpp>
+#include <Structures.hpp>
 #include <RandomForestLearner.hpp>
 
 /** \brief Opens the file and compute a feature signature as per the mode

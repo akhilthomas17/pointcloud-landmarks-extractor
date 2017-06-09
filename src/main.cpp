@@ -23,7 +23,8 @@ int main(int argc, char const *argv[])
                 break;
         }
          */
-        string pathToClassifier = "../data/rand_forest_multiclass_training/PoleTreeClassifier.xml";
+        string pathToClassifier =
+                "/home/akhil/SemProjectGit/data/models/random-forest/datasetA+B/PoleTreeClassifier.xml";
         poleDetector->algorithmClassifierBased(argv[1], pathToClassifier, atof(argv[2]), mode);
 		//poleDetector->algorithmFeatureDescriptorBased(argv[1], pathToDataFolder, atof(argv[2]), atof(argv[3]), mode);
 	}

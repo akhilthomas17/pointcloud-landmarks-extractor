@@ -5,7 +5,7 @@
 #ifndef POLE_DETECTOR_VISUALIZER_HPP
 #define POLE_DETECTOR_VISUALIZER_HPP
 
-#include <common.hpp>
+#include <Structures.hpp>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <boost/random/uniform_int_distribution.hpp>
 #include <boost/random/mersenne_twister.hpp>
@@ -49,6 +49,8 @@ public:
         eigenV4f2PointXYZ(cluster.getCentroid(), center);
         viewer->addSphere(center, cluster.getRadius()/2, r, g, b, id);
     }
+
+    void makeColouredCloud(list<Segment>& segmentList);
 
 private:
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;

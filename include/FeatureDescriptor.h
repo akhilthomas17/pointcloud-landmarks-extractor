@@ -1,7 +1,7 @@
 #ifndef FEATUREDESCRIPTOR_H
 #define FEATUREDESCRIPTOR_H
 
-#include <common.hpp>
+#include <Structures.hpp>
 #include <pcl/common/common.h>
 
 
