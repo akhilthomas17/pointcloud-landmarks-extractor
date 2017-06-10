@@ -3,7 +3,7 @@
 //
 
 
-#include <RandomForestLearner.hpp>
+#include <Classifier/RandomForestLearner.hpp>
 
 RandomForestLearner::RandomForestLearner() {
     treeClassifier = new CvRTrees;

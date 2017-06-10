@@ -2,14 +2,14 @@
 // Created by akhil on 17.05.17.
 //
 
-#ifndef POLE_DETECTOR_PREPROCESSOR_HPP
-#define POLE_DETECTOR_PREPROCESSOR_HPP
+#ifndef PREPROCESSOR_HPP
+#define PREPROCESSOR_HPP
 
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/filters/extract_indices.h>
 
-#include <Structures.hpp>
+#include <Libs/Structures.hpp>
 
 
 

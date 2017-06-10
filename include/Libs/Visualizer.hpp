@@ -2,10 +2,10 @@
 // Created by akhil on 17.05.17.
 //
 
-#ifndef POLE_DETECTOR_VISUALIZER_HPP
-#define POLE_DETECTOR_VISUALIZER_HPP
+#ifndef VISUALIZER_HPP
+#define VISUALIZER_HPP
 
-#include <Structures.hpp>
+#include <Libs/Structures.hpp>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <boost/random/uniform_int_distribution.hpp>
 #include <boost/random/mersenne_twister.hpp>
@@ -14,6 +14,9 @@ class Visualizer {
 public:
 
     Visualizer(){
+    }
+
+    void initializeViewer(){
         viewer = boost::shared_ptr<pcl::visualization::PCLVisualizer> (new pcl::visualization::PCLVisualizer ("Pole Detector"));
         viewer->setBackgroundColor (0, 0, 0);
         viewer->addCoordinateSystem (3.0, "coordinates", 0);
@@ -50,7 +53,23 @@ public:
         viewer->addSphere(center, cluster.getRadius()/2, r, g, b, id);
     }
 
-    void makeColouredCloud(list<Segment>& segmentList);
+    void makeColouredCloud(list<Segment>& segmentList, pcl::PointCloud<pcl::PointXYZRGB>::Ptr debugCloud){
+        boost::random::uniform_int_distribution<> dist(0, 255);
+        for (list<Segment>::iterator it = segmentList.begin(); it != segmentList.end(); ++it) {
+            Segment segment = *it;
+            //** Making single color for each detected pole
+            uint8_t r = dist(randomGen), g = dist(randomGen), b = dist(randomGen);
+            uint32_t rgb = ((uint32_t) r << 16 | (uint32_t) g << 8 | (uint32_t) b);
+            for (list<Cluster>::iterator it2 = segment.getSegmentParts().begin();
+                 it2 != segment.getSegmentParts().end(); ++it2) {
+                for (size_t i = 0; i < it2->getClusterCloud()->points.size(); ++i) {
+                    pcl::PointXYZRGB PtColored;
+                    makeColoredPoint(PtColored, it2->getClusterCloud()->points[i], rgb);
+                    debugCloud->points.push_back(PtColored);
+                }
+            }
+        }
+    }
 
 private:
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;

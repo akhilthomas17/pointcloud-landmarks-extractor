@@ -1,4 +1,4 @@
-#include <pole_detector.h>
+#include <Master.hpp>
 int main(int argc, char const *argv[])
 {
 	if ( argc != 4 ) // argc should be 5 for correct execution
@@ -8,7 +8,7 @@ int main(int argc, char const *argv[])
     }
 
 	else {
-		PCLPoleDetector* poleDetector = new PCLPoleDetector;
+		Master* poleDetector = new Master;
 		//string pathToPcd = "../results/don-optimization/no-filter/raw-don/don_0-5+5.pcd";
         int mode = atoi(argv[3]);
         /*
@@ -25,7 +25,7 @@ int main(int argc, char const *argv[])
          */
         string pathToClassifier =
                 "/home/akhil/SemProjectGit/data/models/random-forest/datasetA+B/PoleTreeClassifier.xml";
-        poleDetector->algorithmClassifierBased(argv[1], pathToClassifier, atof(argv[2]), mode);
+        poleDetector->runLandmarkClassifier(argv[1], pathToClassifier, atof(argv[2]), mode, -1, true);
 		//poleDetector->algorithmFeatureDescriptorBased(argv[1], pathToDataFolder, atof(argv[2]), atof(argv[3]), mode);
 	}
 

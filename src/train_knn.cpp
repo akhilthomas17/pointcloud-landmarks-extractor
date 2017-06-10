@@ -5,7 +5,7 @@
 #include <flann/flann.h>
 #include <flann/io/hdf5.h>
 #include <fstream>
-#include <FeatureDescriptor.h>
+#include <Classifier/FeatureExtractor.hpp>
 
 
 /** \brief Opens the file and compute a feature signature as per the mode
@@ -15,7 +15,7 @@
 bool
 computeFeature (const boost::filesystem::path &path, Feature &feature, int mode)
 {
-    FeatureDescriptor descriptor;
+    FeatureExtractor descriptor;
 
     // Cloud for storing the object.
     pcl::PointCloud<pcl::PointXYZ>::Ptr object(new pcl::PointCloud<pcl::PointXYZ>);
@@ -26,22 +26,22 @@ computeFeature (const boost::filesystem::path &path, Feature &feature, int mode)
 
     switch (mode){
         case 0:
-            descriptor.describeEsfFeature(object,&feature);
+            descriptor.extractEsfFeature(object, &feature);
             break;
         case 1: {
             Segment segment;
             segment.setSegmentCloud(object);
             segment.computeCentroid();
-            descriptor.describeEigenFeature(&segment,&feature);
+            descriptor.extractEigenFeature(&segment, &feature);
             break;
         }
         case 2: {
-            descriptor.describeEsfFeature(object, &feature);
+            descriptor.extractEsfFeature(object, &feature);
             Feature eigVal;
             Segment segment;
             segment.setSegmentCloud(object);
             segment.computeCentroid();
-            descriptor.describeEigenFeature(&segment, &eigVal);
+            descriptor.extractEigenFeature(&segment, &eigVal);
             feature += eigVal;
             break;
         }

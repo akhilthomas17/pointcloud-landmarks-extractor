@@ -2,12 +2,12 @@
 // Created by akhil on 18.05.17.
 //
 
-#ifndef POLE_DETECTOR_SEGMENTER_HPP
-#define POLE_DETECTOR_SEGMENTER_HPP
+#ifndef SEGMENTER_HPP
+#define SEGMENTER_HPP
 
-#include <Structures.hpp>
-#include <Visualizer.hpp>
-#include <IO.hpp>
+#include <Libs/Structures.hpp>
+#include <Libs/Visualizer.hpp>
+#include <Libs/IO.hpp>
 
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/don.h>

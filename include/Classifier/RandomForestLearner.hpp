@@ -2,11 +2,11 @@
 // Created by akhil on 03.05.17.
 //
 
-#ifndef POLE_DETECTOR_RANDOMFORESTLEARNER_HPP
-#define POLE_DETECTOR_RANDOMFORESTLEARNER_HPP
+#ifndef RANDOMFORESTLEARNER_HPP
+#define RANDOMFORESTLEARNER_HPP
 
 #include <opencv2/ml/ml.hpp>
-#include "Structures.hpp"
+#include "Libs/Structures.hpp"
 using namespace cv;
 
 class RandomForestLearner {

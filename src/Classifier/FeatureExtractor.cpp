@@ -1,17 +1,17 @@
-#include "FeatureDescriptor.h"
+#include "Classifier/FeatureExtractor.hpp"
 
 
-FeatureDescriptor::FeatureDescriptor()
+FeatureExtractor::FeatureExtractor()
 {
     //ctor
 }
 
-FeatureDescriptor::~FeatureDescriptor()
+FeatureExtractor::~FeatureExtractor()
 {
     //dtor
 }
 
-void FeatureDescriptor::describeEsfFeature(pcl::PointCloud<pcl::PointXYZ>::Ptr segmentCloud, Feature* esfFeature)
+void FeatureExtractor::extractEsfFeature(pcl::PointCloud<pcl::PointXYZ>::Ptr segmentCloud, Feature *esfFeature)
 {
     // Estimating esf for the cluster
     pcl::PointCloud<pcl::ESFSignature640>::Ptr descriptor(new pcl::PointCloud<pcl::ESFSignature640>);
@@ -33,17 +33,17 @@ void FeatureDescriptor::describeEsfFeature(pcl::PointCloud<pcl::PointXYZ>::Ptr s
     //*/
 }
 
-void FeatureDescriptor::describeEigenFeature(Segment* segment, Feature* eigenFeature)
+void FeatureExtractor::extractEigenFeature(Segment *candidate, Feature *eigenFeature)
 {
     // Find the variances.
-    const size_t kNPoints = segment->getSegmentCloud()->points.size();
+    const size_t kNPoints = candidate->getSegmentCloud()->points.size();
     pcl::PointCloud<pcl::PointXYZ> variances;
     for (size_t i = 0u; i < kNPoints; ++i)
     {
         variances.push_back(pcl::PointXYZ());
-        variances.points[i].x = segment->getSegmentCloud()->points[i].x - segment->getCentroid()[0];
-        variances.points[i].y = segment->getSegmentCloud()->points[i].y - segment->getCentroid()[1];
-        variances.points[i].z = segment->getSegmentCloud()->points[i].z - segment->getCentroid()[2];
+        variances.points[i].x = candidate->getSegmentCloud()->points[i].x - candidate->getCentroid()[0];
+        variances.points[i].y = candidate->getSegmentCloud()->points[i].y - candidate->getCentroid()[1];
+        variances.points[i].z = candidate->getSegmentCloud()->points[i].z - candidate->getCentroid()[2];
     }
 
     // Find the covariance matrix. Since it is symmetric, we only bother with the upper diagonal.
@@ -118,7 +118,7 @@ void FeatureDescriptor::describeEigenFeature(Segment* segment, Feature* eigenFea
 
     pcl::PointXYZ point_min, point_max;
 
-    pcl::getMinMax3D(*(segment->getSegmentCloud()), point_min, point_max);
+    pcl::getMinMax3D(*(candidate->getSegmentCloud()), point_min, point_max);
 
     double diff_x, diff_y, diff_z;
 
@@ -134,4 +134,28 @@ void FeatureDescriptor::describeEigenFeature(Segment* segment, Feature* eigenFea
     {
         eigenFeature->signatureAsVector.push_back(0.0);//pointing_down
     }
+}
+
+bool FeatureExtractor::filterSegment(Segment *candidate, double minHeight, double xyBoundThreshold) {
+    bool filter = true;
+    if (candidate->getHeight() > minHeight){
+        Eigen::Vector4f minVecX, maxVecX, minVecY, maxVecY;
+        pcl::PointXYZ minPtX, maxPtX, minPtY, maxPtY;
+        minPtY = minPtX = candidate->getMinPt();
+        maxPtY = maxPtX = candidate->getMaxPt();
+        minPtX.y = (minPtX.y + maxPtX.y)/2;
+        maxPtX.y = minPtX.y;
+        PointXYZ2eigenV4f2D(minVecX, minPtX);
+        PointXYZ2eigenV4f2D(maxVecX, maxPtX);
+        minPtY.x = (minPtY.x + maxPtY.x)/2;
+        maxPtY.x = minPtY.x;
+        PointXYZ2eigenV4f2D(minVecY, minPtY);
+        PointXYZ2eigenV4f2D(maxVecY, maxPtY);
+
+        double xyBound = std::max((maxVecX - minVecX).norm(), (maxVecY - minVecY).norm());
+        if (xyBound <= xyBoundThreshold){
+            filter = false;
+        }
+    }
+    return filter;
 }

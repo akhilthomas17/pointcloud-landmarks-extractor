@@ -2,7 +2,7 @@
 // Created by akhil on 18.05.17.
 //
 
-#include "Segmenter.hpp"
+#include "Segmenter/Segmenter.hpp"
 
 void Segmenter::stitchClusters(double angleToVertical, double maxDistanceStitches,
                                list<Segment> &stitchedClusters) {
