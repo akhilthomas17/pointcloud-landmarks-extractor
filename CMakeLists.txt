@@ -23,11 +23,30 @@ if(HDF5_FOUND)
   include_directories(${FLANN_INCLUDE_DIRS})
 
   include_directories(${HDF5_INCLUDE_DIR})
+
+  add_executable(pole_detector
+          src/Master.cpp src/pole_detector.cpp
+          src/Preprocessor/Preprocessor.cpp
+          src/Segmenter/Segmenter.cpp
+          src/Detector/RuleBasedDetector.cpp
+          src/Classifier/FeatureExtractor.cpp
+          src/Classifier/RandomForestLearner.cpp
+          src/Classifier/FeatureBasedClassifier.cpp
+          )
+
+  target_link_libraries(pole_detector ${PCL_LIBRARIES} ${Boost_LIBRARIES}
+          ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY} ${OpenCV_LIBS})
+
   add_executable(landmark_classifier
           src/Master.cpp
           src/landmark_classifier.cpp
+          src/Preprocessor/Preprocessor.cpp
+          src/Segmenter/Segmenter.cpp
+          src/Detector/RuleBasedDetector.cpp
           src/Classifier/FeatureExtractor.cpp
-          src/Classifier/RandomForestLearner.cpp include/Libs/Visualizer.hpp src/Preprocessor/Preprocessor.cpp include/Preprocessor/Preprocessor.hpp src/Segmenter/Segmenter.cpp include/Segmenter/Segmenter.hpp include/Libs/IO.hpp src/Detector/RuleBasedDetector.cpp include/Detector/RuleBasedDetector.hpp src/Classifier/FeatureBasedClassifier.cpp include/Classifier/FeatureBasedClassifier.hpp)
+          src/Classifier/RandomForestLearner.cpp
+          src/Classifier/FeatureBasedClassifier.cpp
+          )
 
   target_link_libraries(landmark_classifier ${PCL_LIBRARIES} ${Boost_LIBRARIES}
                                  ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY} ${OpenCV_LIBS})

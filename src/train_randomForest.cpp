@@ -5,9 +5,10 @@
 #include <Libs/Structures.hpp>
 #include <Classifier/RandomForestLearner.hpp>
 
-/** \brief Opens the file and compute a feature signature as per the mode
+/** \brief Opens the pcd file and compute a feature signature as per the mode
   * \param path the input file name
   * \param feature the resultant Feature
+  * \param mode the feature descriptor used
   */
 bool
 computeFeature (const boost::filesystem::path &path, Feature &feature, int mode)
@@ -154,10 +155,10 @@ main (int argc, char** argv)
             2,				/* min_sample_count */
             0,									/* regression_accuracy */
             false,								/* use_surrogates */
-            10,									/* max_categories */
+            15,									/* max_categories */
             0,								/* priors */
             true,								/* calc_var_importance */
-            0,									/* nactive_vars ääööää*/
+            50,									/* nactive_vars ääööää*/
             numTrees,		/* max_num_of_trees_in_the_forest */
             0,									/* forest_accuracy */
             CV_TERMCRIT_ITER|CV_TERMCRIT_EPS

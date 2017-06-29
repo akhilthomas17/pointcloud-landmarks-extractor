@@ -20,7 +20,7 @@ public:
     }
     ~Preprocessor(){}
     void outlierRemover(int mean, double stdDev);
-    void groundPlaneRemover(int distThreshold);
+    void groundPlaneRemover(double distThreshold);
 private:
     pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud;
 };

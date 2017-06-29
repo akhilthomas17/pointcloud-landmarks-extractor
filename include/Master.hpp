@@ -28,17 +28,21 @@
 #include <pcl/search/organized.h>
 
 
-
+/**
+ * Class that has different approaches implemented for landmark classification from pointclouds
+ */
 class Master
 {
 public:
     Master();
     ~Master();
-    void runPoleDetector(string pathToPCDFile, double xyBoundThreshold,
-                         double maxDistanceStitches, double minPoleHeight, double scaleSmall);
+    void runInitialApproach(string pathToPCDFile, double xyBoundThreshold,
+                           double maxDistanceStitches, double minPoleHeight);
+    void runPoleDetector(bool donInput, string pathToPCDFile, double donThreshold, double maxDistanceStitches,
+                             double xyBoundThreshold, double minPoleHeight);
     void buildRefClusters(string pathToPCDFile, double maxDistanceStitches, double scaleSmall);
-	void runLandmarkClassifier(string pathToPCDFile, string pathToClassifier, double donScaleSmall,
-                               int mode, bool rForest, double knnThreshold);
+	void runLandmarkClassifier(bool rawPCDinput, string pathToPCDFile, double donScaleSmall, int featureMode,
+                               bool knnClassifier, string pathToClassifier, double knnThreshold);
 
 private:
 

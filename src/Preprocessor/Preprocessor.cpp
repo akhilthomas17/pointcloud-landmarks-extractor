@@ -12,7 +12,7 @@ void Preprocessor::outlierRemover(int mean, double stdDev){
     sor.filter (*processCloud);
 }
 
-void Preprocessor::groundPlaneRemover(int distThreshold) {
+void Preprocessor::groundPlaneRemover(double distThreshold) {
     // Create the segmentation object for the planar model and set all the parameters
     pcl::SACSegmentation<pcl::PointXYZ> seg;
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);

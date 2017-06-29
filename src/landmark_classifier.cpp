@@ -1,32 +1,27 @@
 #include <Master.hpp>
 int main(int argc, char const *argv[])
 {
-	if ( argc != 4 ) // argc should be 5 for correct execution
+	if ( argc != 6 ) // argc should be 6 for correct execution
     {
-        cout<<"usage: "<< argv[0] <<" <path to pcd file> <DON cluster threshold> <mode>\n";
-        pcl::console::print_highlight("[mode]\n0 : To use esf based features\n1 : To use eigen value based features\n2 : To use combination of above two\n");
+        cout<<"usage: "<< argv[0] <<" <input mode> <path to pcd file> <classifier mode> "
+                "<path to classifier model> <DON cluster threshold>\n";
+        pcl::console::print_highlight("[input mode]\n1 : Input DON file"
+                                              "\n0 : Input raw PCD file\n");
+        pcl::console::print_highlight("[classifier mode]\n1 : Random forest classifier"
+                                              "\n0 : KNN\n");
     }
 
 	else {
-		Master* poleDetector = new Master;
-		//string pathToPcd = "../results/don-optimization/no-filter/raw-don/don_0-5+5.pcd";
-        int mode = atoi(argv[3]);
-        /*
-        string pathToDataFolder;
-        switch (mode)
-        {
-            case 0: pathToDataFolder = "../data/esf_training/";
-                break;
-            case 1: pathToDataFolder = "../data/eigen_training/";
-                break;
-            case 2: pathToDataFolder = "../data/combined_training/";
-                break;
-        }
-         */
-        string pathToClassifier =
-                "/home/akhil/SemProjectGit/data/models/random-forest/datasetA+B/PoleTreeClassifier.xml";
-        poleDetector->runLandmarkClassifier(argv[1], pathToClassifier, atof(argv[2]), mode, -1, true);
-		//poleDetector->algorithmFeatureDescriptorBased(argv[1], pathToDataFolder, atof(argv[2]), atof(argv[3]), mode);
+		Master* master = new Master;
+        int featureMode = 2; // To use combined features
+        bool inputMode = (bool) atoi(argv[1]);
+        bool classifierMode = (bool) atoi(argv[3]);
+        double knnThreshold = 0;
+        if (!classifierMode)
+            knnThreshold = 0.3;
+        string pathToClassifier = argv[4];
+        master->runLandmarkClassifier(inputMode, argv[2], atof(argv[5]), featureMode,
+                                            classifierMode, pathToClassifier, knnThreshold);
 	}
 
 	return 0;
