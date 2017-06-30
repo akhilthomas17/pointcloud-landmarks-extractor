@@ -190,8 +190,8 @@ void Master::runLandmarkClassifier(bool donInput, string pathToPCDFile, double s
 
     stitchedClusters.clear();
     ioManager.writeDebugCloud(poleLikeClusters, "pole-like.pcd");
-    ioManager.writeDebugCloud(detectedPoles, "poles.pcd");
-    ioManager.writeDebugCloud(detectedTrees, "trees.pcd");
+    ioManager.writeSegments(detectedPoles, "Poles");
+    ioManager.writeSegments(detectedTrees, "Trees");
 }
 
 

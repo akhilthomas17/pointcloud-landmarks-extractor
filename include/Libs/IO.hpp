@@ -6,6 +6,7 @@
 #define IO_HPP
 
 #include <pcl/io/pcd_io.h>
+#include <boost/filesystem.hpp>
 #include <Libs/Structures.hpp>
 
 class IO{
@@ -25,16 +26,22 @@ public:
         std::cerr << "Saved " << outCloud->points.size() << " data points to " + pathToFile << std::endl;
     }
     void writeSegments(list<Segment>& segmentList, string folderName){
-        int i = 0;
-        for (std::list<Segment>::iterator it = segmentList.begin(); it != segmentList.end(); ++it){
-            writer.writeBinary(folderName + "/" + folderName + boost::lexical_cast<std::string>(i) + ".pcd", *(it->getSegmentCloud()));
-            i += 1;
+        if(!segmentList.empty()){
+            if(!boost::filesystem::exists(boost::filesystem::path(folderName)))
+                boost::filesystem::create_directory(boost::filesystem::path(folderName));
+            int i = 0;
+            for (std::list<Segment>::iterator it = segmentList.begin(); it != segmentList.end(); ++it){
+                writer.writeBinary(folderName + "/" + folderName + boost::lexical_cast<std::string>(i) + ".pcd", *(it->getSegmentCloud()));
+                i += 1;
+            }
         }
     }
     void writeDebugCloud(list<Segment>& segmentList, string pathToFile){
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr debugCloud (new pcl::PointCloud<pcl::PointXYZRGB>);
-        visualizer.makeColouredCloud(segmentList, debugCloud);
-        writePCD(debugCloud, pathToFile);
+        if(!segmentList.empty()){
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr debugCloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+            visualizer.makeColouredCloud(segmentList, debugCloud);
+            writePCD(debugCloud, pathToFile);
+        }
     }
 
 private:
