@@ -67,11 +67,12 @@ void Segmenter::stitchClusters(double angleToVertical, double maxDistanceStitche
 void Segmenter::donSegmenter(int minPts, int maxPts, double scaleSmall,
                                    double scaleLarge, double donThreshold, bool donLoaded){
     // Check if DON has to be build or is loaded from file
-    if (!donLoaded)
+    if (!donLoaded){
+        pcl::copyPointCloud<pcl::PointXYZ, pcl::PointNormal>(*processCloud, *donCloud);
         buildDon(scaleSmall, scaleLarge);
+    }
     thresholdDon(0.25);
     pcl::copyPointCloud<pcl::PointNormal, pcl::PointXYZ>(*donCloud, *processCloud);
-
     vector<pcl::PointIndices> clusterIndices;
     donClusterExtractor(clusterIndices, minPts, maxPts, donThreshold);
 

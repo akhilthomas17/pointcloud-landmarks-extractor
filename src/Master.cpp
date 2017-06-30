@@ -146,8 +146,8 @@ void Master::buildRefClusters(string pathToPCDFile, double maxDistanceStitches, 
  * @param pathToClassifier the path to trained classifier
  * @param knnThreshold KNN threshold if KNN is used for classification
  */
-void Master::runLandmarkClassifier(bool donInput, string pathToPCDFile, double thresholdDON, int featureMode,
-                                   bool rForest, string pathToClassifier, double knnThreshold) {
+void Master::runLandmarkClassifier(bool donInput, string pathToPCDFile, double smallRadiusDON, double thresholdDON,
+                                   int featureMode, bool rForest, string pathToClassifier, double knnThreshold) {
     if(!donInput){
         /// Reading Input cloud
         ioManager.readPCD(pathToPCDFile, processCloud);
@@ -166,11 +166,10 @@ void Master::runLandmarkClassifier(bool donInput, string pathToPCDFile, double t
     /// DON thresholding and clustering. thresholdDON here is the DON cluster threshold
     int maxPts = 50000;
     int minPts = 15;
-    double donScaleSmall = 0.5;
-    double scaleLarge = donScaleSmall*10;
+    double largeRadius = smallRadiusDON*10;
     if(donInput)
         segmenter.loadDon(pathToPCDFile);
-    segmenter.donSegmenter(minPts, maxPts, donScaleSmall, scaleLarge, thresholdDON, donInput);
+    segmenter.donSegmenter(minPts, maxPts, smallRadiusDON, largeRadius, thresholdDON, donInput);
     //*/
 
 

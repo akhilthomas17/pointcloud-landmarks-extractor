@@ -41,8 +41,8 @@ public:
     void runPoleDetector(bool donInput, string pathToPCDFile, double donThreshold, double maxDistanceStitches,
                              double xyBoundThreshold, double minPoleHeight);
     void buildRefClusters(string pathToPCDFile, double maxDistanceStitches, double scaleSmall);
-	void runLandmarkClassifier(bool rawPCDinput, string pathToPCDFile, double donScaleSmall, int featureMode,
-                               bool knnClassifier, string pathToClassifier, double knnThreshold);
+	void runLandmarkClassifier(bool rawPCDinput, string pathToPCDFile, double smallRadiusDON, double donScaleSmall,
+                                   int featureMode, bool knnClassifier, string pathToClassifier, double knnThreshold);
 
 private:
 

@@ -24,19 +24,6 @@ if(HDF5_FOUND)
 
   include_directories(${HDF5_INCLUDE_DIR})
 
-  add_executable(pole_detector
-          src/Master.cpp src/pole_detector.cpp
-          src/Preprocessor/Preprocessor.cpp
-          src/Segmenter/Segmenter.cpp
-          src/Detector/RuleBasedDetector.cpp
-          src/Classifier/FeatureExtractor.cpp
-          src/Classifier/RandomForestLearner.cpp
-          src/Classifier/FeatureBasedClassifier.cpp
-          )
-
-  target_link_libraries(pole_detector ${PCL_LIBRARIES} ${Boost_LIBRARIES}
-          ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY} ${OpenCV_LIBS})
-
   add_executable(landmark_classifier
           src/Master.cpp
           src/landmark_classifier.cpp
@@ -50,19 +37,5 @@ if(HDF5_FOUND)
 
   target_link_libraries(landmark_classifier ${PCL_LIBRARIES} ${Boost_LIBRARIES}
                                  ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY} ${OpenCV_LIBS})
-
-  add_executable(train_knn
-          src/train_knn.cpp
-          src/Classifier/FeatureExtractor.cpp)
-
-  target_link_libraries(train_knn ${PCL_LIBRARIES} ${Boost_LIBRARIES}
-                                 ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY})
-  add_executable(train_randomForest
-          src/train_randomForest.cpp
-          src/Classifier/RandomForestLearner.cpp
-          src/Classifier/FeatureExtractor.cpp)
-
-  target_link_libraries(train_randomForest ${PCL_LIBRARIES} ${Boost_LIBRARIES}
-          ${FLANN_LIBRARIES} ${HDF5_hdf5_LIBRARY} ${OpenCV_LIBS})
 
 endif(HDF5_FOUND)
