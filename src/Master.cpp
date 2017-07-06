@@ -151,6 +151,7 @@ void Master::runLandmarkClassifier(bool donInput, string pathToPCDFile, double t
     if(!donInput){
         /// Reading Input cloud
         ioManager.readPCD(pathToPCDFile, processCloud);
+        cerr << "Loaded input raw point cloud from " << pathToPCDFile << endl;
         int meanKNoise = 10;
         double stdDevNoise = 1;
 
@@ -168,8 +169,10 @@ void Master::runLandmarkClassifier(bool donInput, string pathToPCDFile, double t
     int minPts = 15;
     double donScaleSmall = 0.5;
     double scaleLarge = donScaleSmall*10;
-    if(donInput)
+    if(donInput) {
         segmenter.loadDon(pathToPCDFile);
+        cerr << "Loaded input DON point cloud from " << pathToPCDFile << endl;
+    }
     segmenter.donSegmenter(minPts, maxPts, donScaleSmall, scaleLarge, thresholdDON, donInput);
     //*/
 
@@ -183,13 +186,18 @@ void Master::runLandmarkClassifier(bool donInput, string pathToPCDFile, double t
 
     /// Loading trained random forest classifier, extracting features and predicting
     FeatureBasedClassifier classifier(&poleLikeClusters, &detectedPoles, &detectedTrees);
-    if (rForest)
+    if (rForest) {
         classifier.loadRandomForest(pathToClassifier);
-    else
+        cerr << "Loaded random forest classifier from " << pathToClassifier << endl;
+    }
+    else {
         classifier.loadKnn(pathToClassifier, knnThreshold);
-    classifier.featureMatcher(stitchedClusters, featureMode, rForest);
+        cerr << "Loaded saved KdTree from " << pathToClassifier << endl;
+    }
 
+    classifier.featureMatcher(stitchedClusters, featureMode, rForest);
     stitchedClusters.clear();
+
     ioManager.writeDebugCloud(poleLikeClusters, "pole-like.pcd");
     ioManager.writeDebugCloud(detectedPoles, "poles.pcd");
     ioManager.writeDebugCloud(detectedTrees, "trees.pcd");

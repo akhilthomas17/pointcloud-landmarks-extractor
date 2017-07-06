@@ -20,7 +20,10 @@ int main(int argc, char const *argv[])
         if (!classifierMode)
             knnThreshold = 0.3;
         string pathToClassifier = argv[4];
-        master->runLandmarkClassifier(inputMode, argv[2], atof(argv[5]), featureMode,
+        if(!boost::filesystem::exists(boost::filesystem::path(pathToClassifier)))
+            cerr << "Check input path for trained classifier: " << pathToClassifier <<endl;
+        else
+            master->runLandmarkClassifier(inputMode, argv[2], atof(argv[5]), featureMode,
                                             classifierMode, pathToClassifier, knnThreshold);
 	}
 

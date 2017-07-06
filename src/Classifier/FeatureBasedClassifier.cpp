@@ -23,7 +23,7 @@ void FeatureBasedClassifier::featureMatcher(list<Segment> stitchedClusters, int 
                 case 1:
                     featureExtractor.extractEigenFeature(&candidate, &feature);
                     break;
-                case 2: {
+                case 2:{
                     featureExtractor.extractEsfFeature(candidate.getSegmentCloud(), &feature);
                     Feature eigVal;
                     featureExtractor.extractEigenFeature(&candidate, &eigVal);
