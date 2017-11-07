@@ -16,6 +16,16 @@ link_directories(${PCL_LIBRARY_DIRS})
 
 add_definitions(${PCL_DEFINITIONS})
 
+add_executable(approach_landa
+        src/landa_approach.cpp
+        src/Preprocessor/Preprocessor.cpp
+        src/Segmenter/Segmenter.cpp
+        src/Detector/RuleBasedDetector.cpp
+        )
+target_link_libraries(approach_landa
+        ${PCL_LIBRARIES} ${Boost_LIBRARIES})
+
+
 find_package(HDF5)
 if(HDF5_FOUND)
 

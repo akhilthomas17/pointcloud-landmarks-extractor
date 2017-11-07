@@ -35,24 +35,22 @@ void Preprocessor::groundPlaneRemover(double distThreshold) {
             std::cout << "Could not estimate a planar model for the given dataset." << std::endl;
             break;
         }
-
         // Extract the planar inliers from the input cloud
         pcl::ExtractIndices<pcl::PointXYZ> extract;
         extract.setInputCloud (processCloud);
         extract.setIndices (inliers);
-        /*
-        extract.setNegative (false);
-
-        // Get the points associated with the planar surface
-        extract.filter (*cloud_plane);
-        pointCloudVisualizer(cloud_plane, 'r', "Ground plane removed" + boost::lexical_cast<string>(j));
-
-        */
-        // Remove the planar inliers, extract the rest
         extract.setNegative (true);
         extract.filter (*processCloud);
         j++;
     }
+}
 
+void Preprocessor::cutCloudBuilder(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, double zMin, double zMax) {
+    // Create the filtering object
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud (processCloud);
+    pass.setFilterFieldName ("z");
+    pass.setFilterLimits (zMin, zMax);
+    pass.filter(*cutCloud);
 }
 

@@ -12,8 +12,11 @@ class IO{
 public:
     IO(){}
     void readPCD(string pathToFile, pcl::PointCloud<pcl::PointXYZ>::Ptr inCloud){
-        reader.read (pathToFile, *inCloud);
-        cerr << "Size of input cloud: " << inCloud->width * inCloud->height << " data points." << endl;
+        cerr << "Loading point cloud from " << pathToFile << endl;
+        if (reader.read (pathToFile, *inCloud) < 0)
+            cerr << "Error loading input point cloud" << endl;
+        else
+            cerr << "Input point cloud loaded. Size of input cloud: " << inCloud->width * inCloud->height << " data points." << endl;
     }
     void readDon(string pathToFile, pcl::PointCloud<pcl::PointNormal>::Ptr donCloud){
         pcl::PCDReader reader;

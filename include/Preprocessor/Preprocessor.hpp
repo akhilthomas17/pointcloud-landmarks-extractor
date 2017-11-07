@@ -8,6 +8,7 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/filters/passthrough.h>
 
 #include <Libs/Structures.hpp>
 
@@ -21,6 +22,7 @@ public:
     ~Preprocessor(){}
     void outlierRemover(int mean, double stdDev);
     void groundPlaneRemover(double distThreshold);
+    void cutCloudBuilder(pcl::PointCloud<pcl::PointXYZ>::Ptr cutCloud, double zMin, double zMax);
 private:
     pcl::PointCloud<pcl::PointXYZ>::Ptr processCloud;
 };
